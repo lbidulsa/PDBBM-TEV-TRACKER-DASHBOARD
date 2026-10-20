@@ -18,24 +18,24 @@ st.set_page_config(
 # ---------------------------------------------------------
 # 2. GOOGLE SHEETS LIVE SYNC CONFIGURATION
 # ---------------------------------------------------------
-PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
-APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
-APPSHEET_TABLE_NAME = "TEV"
+PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"[cite: 17]
+APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"[cite: 17]
+APPSHEET_TABLE_NAME = "TEV"[cite: 17]
 
 @st.cache_data(ttl=20)
 def load_tev_data():
     try:
-        df = pd.read_csv(PUBLISHED_CSV_URL)
-        df.columns = [str(col).strip() for col in df.columns]
+        df = pd.read_csv(PUBLISHED_CSV_URL)[cite: 17]
+        df.columns = [str(col).strip() for col in df.columns][cite: 17]
         
         # 1. Alisin ang mga walang nilalaman na empty rows
-        df = df.dropna(how='all')
+        df = df.dropna(how='all')[cite: 17]
         
         # Detect DRN at Name Column
-        drn_c = df.columns[0]
+        drn_c = df.columns[0][cite: 17]
         
         # Alisin ang mga rows na walang DRN
-        df = df[df[drn_c].notna() & (df[drn_c].astype(str).str.strip() != '') & (df[drn_c].astype(str).str.strip().str.upper() != 'NAN')]
+        df = df[df[drn_c].notna() & (df[drn_c].astype(str).str.strip() != '') & (df[drn_c].astype(str).str.strip().str.upper() != 'NAN')][cite: 17]
         
         # 2. Smart Date Parsing para mauna ang pinakabagong date (October)
         date_c = None
@@ -44,50 +44,50 @@ def load_tev_data():
                 date_c = c
                 break
         if not date_c and len(df.columns) > 1:
-            date_c = df.columns[1]
+            date_c = df.columns[1][cite: 17]
             
         if date_c:
-            df['parsed_date'] = pd.to_datetime(df[date_c], errors='coerce')
-            df = df.sort_values(by='parsed_date', ascending=False, na_position='last').drop(columns=['parsed_date'])
+            df['parsed_date'] = pd.to_datetime(df[date_c], errors='coerce')[cite: 17]
+            df = df.sort_values(by='parsed_date', ascending=False, na_position='last').drop(columns=['parsed_date'])[cite: 17]
         else:
-            df = df.iloc[::-1]
+            df = df.iloc[::-1][cite: 17]
             
-        return df.reset_index(drop=True)
+        return df.reset_index(drop=True)[cite: 17]
     except Exception as e:
-        st.error(f"Error connecting to Google Sheets: {e}")
-        return pd.DataFrame()
+        st.error(f"Error connecting to Google Sheets: {e}")[cite: 17]
+        return pd.DataFrame()[cite: 17]
 
 # Smart URL Parser para sa AppSheet & Drive Link
 def format_appsheet_file_url(val):
     if pd.isna(val) or not str(val).strip() or str(val).lower() == 'nan':
         return None, None
-    val_str = str(val).strip()
+    val_str = str(val).strip()[cite: 17]
     
     if val_str.startswith("http://") or val_str.startswith("https://"):
-        return val_str, val_str
+        return val_str, val_str[cite: 17]
 
-    drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)
+    drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)[cite: 17]
     if drive_match:
-        file_id = drive_match.group(1)
-        embed_url = f"https://drive.google.com/uc?export=view&id={file_id}"
-        view_url = f"https://drive.google.com/file/d/{file_id}/view"
-        return embed_url, view_url
+        file_id = drive_match.group(1)[cite: 17]
+        embed_url = f"https://drive.google.com/uc?export=view&id={file_id}"[cite: 17]
+        view_url = f"https://drive.google.com/file/d/{file_id}/view"[cite: 17]
+        return embed_url, view_url[cite: 17]
 
-    encoded_table = APPSHEET_TABLE_NAME.replace(" ", "%20")
-    encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
-    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
+    encoded_table = APPSHEET_TABLE_NAME.replace(" ", "%20")[cite: 17]
+    encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")[cite: 17]
+    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"[cite: 17]
     
-    return appsheet_url, appsheet_url
+    return appsheet_url, appsheet_url[cite: 17]
 
 def clean_val(val, default="---"):
     if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
         return default
-    return str(val).strip()
+    return str(val).strip()[cite: 17]
 
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. CUSTOM CSS AND GLOWING EFFECTS
+# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + SIGA-SIGA CSS
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -97,67 +97,83 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
+    /* Deep Obsidian Background */
     .stApp { 
-        background-color: #0B132B !important; 
+        background-color: #080C14 !important; 
         color: #FFFFFF !important;
     }
     
-    /* Header Card */
+    /* Neon Header Card */
     .header-card {
-        background: #1C2541;
-        border: 2px solid #3A506B;
-        border-radius: 12px;
-        padding: 20px 25px;
-        margin-bottom: 20px;
+        background: linear-gradient(135deg, #0F172A 0%, #1E1035 100%);
+        border: 2px solid #00F5FF;
+        border-radius: 14px;
+        padding: 22px 28px;
+        margin-bottom: 22px;
+        box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
     }
-    .header-title { font-size: 28px; font-weight: 900; color: #6FFFE9; }
-    .header-sub { font-size: 15px; color: #E0E6ED; font-weight: 500; }
+    .header-title { font-size: 30px; font-weight: 900; color: #00F5FF; text-shadow: 0 0 10px rgba(0, 245, 255, 0.6); }
+    .header-sub { font-size: 15px; color: #E2E8F0; font-weight: 500; }
 
-    /* 🌟 SIGA-SIGA GLOWING METRIC CARDS */
+    /* 🌟 CATCHY NEON METRIC CARDS WITH GLOW */
     .metric-card {
-        background: #1C2541;
-        border: 2px solid #3A506B;
+        background: #0F172A;
+        border: 2px solid #1E293B;
         border-radius: 12px;
-        padding: 16px;
+        padding: 18px;
         text-align: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
     }
     .metric-card:hover {
-        transform: translateY(-4px) scale(1.02) !important;
-        border-color: #6FFFE9 !important;
-        box-shadow: 0 0 20px rgba(111, 255, 233, 0.6), 0 0 30px rgba(111, 255, 233, 0.3) !important;
+        transform: translateY(-5px) scale(1.02) !important;
+        border-color: #39FF14 !important;
+        box-shadow: 0 0 25px rgba(57, 255, 20, 0.6), 0 0 35px rgba(0, 245, 255, 0.4) !important;
     }
-    .metric-value { font-size: 26px; font-weight: 900; color: #6FFFE9; margin-top: 5px; }
-    .metric-label { font-size: 13px; font-weight: 700; color: #FFFFFF; text-transform: uppercase; }
+    .metric-value { 
+        font-size: 28px; 
+        font-weight: 900; 
+        color: #00F5FF; 
+        margin-top: 5px;
+        text-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
+    }
+    .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* 🌟 SIGA-SIGA BUTTONS */
+    /* 🌟 NEON MAGENTA BUTTONS */
     div.stButton > button, div.stDownloadButton > button {
-        background-color: #5BC0BE !important;
-        color: #0B132B !important;
+        background: linear-gradient(135deg, #FF007F 0%, #7928CA 100%) !important;
+        color: #FFFFFF !important;
         font-weight: 800 !important;
-        border-radius: 8px !important;
-        border: 1px solid #6FFFE9 !important;
-        padding: 10px 20px !important;
+        border-radius: 10px !important;
+        border: 1px solid #FF007F !important;
+        padding: 10px 22px !important;
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        box-shadow: 0 0 15px rgba(255, 0, 127, 0.4) !important;
     }
     div.stButton > button:hover, div.stDownloadButton > button:hover {
-        background-color: #6FFFE9 !important;
+        background: linear-gradient(135deg, #00F5FF 0%, #0070F3 100%) !important;
         color: #000000 !important;
-        box-shadow: 0 0 20px rgba(111, 255, 233, 0.8), 0 0 30px rgba(111, 255, 233, 0.5) !important;
-        transform: translateY(-2px) scale(1.02) !important;
+        border-color: #00F5FF !important;
+        box-shadow: 0 0 25px rgba(0, 245, 255, 0.9), 0 0 35px rgba(57, 255, 20, 0.6) !important;
+        transform: translateY(-3px) scale(1.03) !important;
     }
 
-    /* 🌟 SIGA-SIGA EXPANDER CARD */
+    /* 🌟 NEON EXPANDER CARD */
     .stExpander {
-        background-color: #1C2541 !important;
-        border: 1px solid #3A506B !important;
-        border-radius: 10px !important;
+        background-color: #0F172A !important;
+        border: 1px solid #1E293B !important;
+        border-radius: 12px !important;
         transition: all 0.3s ease !important;
     }
     .stExpander:hover {
-        border-color: #6FFFE9 !important;
-        box-shadow: 0 0 15px rgba(111, 255, 233, 0.4) !important;
+        border-color: #FF007F !important;
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
+    }
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #080C14 !important;
+        border-right: 1px solid #1E293B;
     }
     
     label, p, span, h1, h2, h3, h4, h5, h6 {
@@ -169,38 +185,37 @@ st.markdown("""
 # ---------------------------------------------------------
 # 4. SIDEBAR NAVIGATION WITH LOGO
 # ---------------------------------------------------------
-# Dagdag ng Logo sa Sidebar
 logo_path = "logo.png"
 if os.path.exists(logo_path):
-    st.sidebar.image(logo_path, use_container_width=True)
+    st.sidebar.image(logo_path, use_container_width=True)[cite: 17]
 elif os.path.exists("Peace and Dev LOGO.jpg"):
-    st.sidebar.image("Peace and Dev LOGO.jpg", use_container_width=True)
+    st.sidebar.image("Peace and Dev LOGO.jpg", use_container_width=True)[cite: 17]
 
-st.sidebar.markdown("### ✈️ PDBBM TEV Portal")
-st.sidebar.caption("AppSheet Live Synchronization")
-st.sidebar.markdown("---")
+st.sidebar.markdown("### ✈️ PDBBM TEV Portal")[cite: 17]
+st.sidebar.caption("AppSheet Live Synchronization")[cite: 17]
+st.sidebar.markdown("---")[cite: 17]
 
 if st.sidebar.button("🔄 Sync / Refresh Data", use_container_width=True):
-    st.cache_data.clear()
-    st.toast("⚡ Refreshed latest TEV records!", icon="🔄")
-    st.rerun()
+    st.cache_data.clear()[cite: 17]
+    st.toast("⚡ Refreshed latest TEV records!", icon="🔄")[cite: 17]
+    st.rerun()[cite: 17]
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("#### 🎯 Quick Program Filter")
+st.sidebar.markdown("---")[cite: 17]
+st.sidebar.markdown("#### 🎯 Quick Program Filter")[cite: 17]
 
-program_col = next((c for c in df_tev.columns if 'program' in c.lower() or 'office' in c.lower() or 'unit' in c.lower()), None)
-selected_program = "All Programs"
+program_col = next((c for c in df_tev.columns if 'program' in c.lower() or 'office' in c.lower() or 'unit' in c.lower()), None)[cite: 17]
+selected_program = "All Programs"[cite: 17]
 
 if not df_tev.empty and program_col:
-    prog_list = ["All Programs"] + sorted([str(p) for p in df_tev[program_col].dropna().unique() if str(p).strip() != "" and str(p).lower() != 'nan'])
-    selected_program = st.sidebar.selectbox("Select Program / Office:", prog_list)
+    prog_list = ["All Programs"] + sorted([str(p) for p in df_tev[program_col].dropna().unique() if str(p).strip() != "" and str(p).lower() != 'nan'])[cite: 17]
+    selected_program = st.sidebar.selectbox("Select Program / Office:", prog_list)[cite: 17]
 
-st.sidebar.markdown("---")
+st.sidebar.markdown("---")[cite: 17]
 st.sidebar.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #E0E6ED;">
         💻 <b>System Architect</b><br>
-        Developed by <br><b style="color:#6FFFE9;">LOUIE B. IDULSA - PDBBM ITO I</b><br>
+        Developed by <br><b style="color:#00F5FF;">LOUIE B. IDULSA - PDBBM ITO I</b><br>
         <i>DSWD FO X • 2026</i>
     </div>
     """,
@@ -215,165 +230,165 @@ st.markdown("""
         <div class="header-title">✈️ PDBBM TEV Executive Tracker</div>
         <div class="header-sub">Live Executive Dashboard • Latest Dates Priority</div>
     </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)[cite: 17]
 
 if not df_tev.empty:
     if selected_program != "All Programs" and program_col:
-        df_filtered = df_tev[df_tev[program_col].astype(str) == selected_program].copy()
+        df_filtered = df_tev[df_tev[program_col].astype(str) == selected_program].copy()[cite: 17]
     else:
-        df_filtered = df_tev.copy()
+        df_filtered = df_tev.copy()[cite: 17]
 
-    drn_col = df_tev.columns[0]
-    name_col = df_tev.columns[3] if len(df_tev.columns) > 3 else df_tev.columns[1]
+    drn_col = df_tev.columns[0][cite: 17]
+    name_col = df_tev.columns[3] if len(df_tev.columns) > 3 else df_tev.columns[1][cite: 17]
 
-    amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'cost' in c.lower() or 'total' in c.lower()), None)
-    overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
+    amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'cost' in c.lower() or 'total' in c.lower()), None)[cite: 17]
+    overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)[cite: 17]
 
-    attach_count = sum(1 for _, r in df_filtered.iterrows() if any(ext in str(v).lower() for v in r.values for ext in ['.jpg', '.png', '.pdf', 'tev_images', 'documents_files']))
-    acct_count = sum(1 for _, r in df_filtered.iterrows() if 'acct' in str(r.values).lower() or 'accounting' in str(r.values).lower())
-    fin_count = sum(1 for _, r in df_filtered.iterrows() if 'finance' in str(r.values).lower())
+    attach_count = sum(1 for _, r in df_filtered.iterrows() if any(ext in str(v).lower() for v in r.values for ext in ['.jpg', '.png', '.pdf', 'tev_images', 'documents_files']))[cite: 17]
+    acct_count = sum(1 for _, r in df_filtered.iterrows() if 'acct' in str(r.values).lower() or 'accounting' in str(r.values).lower())[cite: 17]
+    fin_count = sum(1 for _, r in df_filtered.iterrows() if 'finance' in str(r.values).lower())[cite: 17]
 
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4 = st.columns(4)[cite: 17]
     with m1:
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">Valid TEV Vouchers</div>
                 <div class="metric-value">{len(df_filtered):,}</div>
             </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)[cite: 17]
     with m2:
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">With Attachments</div>
-                <div class="metric-value" style="color:#5BC0BE;">{attach_count:,}</div>
+                <div class="metric-value" style="color:#00F5FF;">{attach_count:,}</div>
             </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)[cite: 17]
     with m3:
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">For Accounting</div>
-                <div class="metric-value" style="color:#FFD166;">{acct_count:,}</div>
+                <div class="metric-value" style="color:#FFE600;">{acct_count:,}</div>
             </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)[cite: 17]
     with m4:
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">Finance Tracked</div>
-                <div class="metric-value" style="color:#06D6A0;">{fin_count:,}</div>
+                <div class="metric-value" style="color:#39FF14;">{fin_count:,}</div>
             </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)[cite: 17]
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)[cite: 17]
 
-    search_query = st.text_input("🔍 Quick Search (DRN #, Claimant / Et. Al, Station, Status, etc.):", "")
+    search_query = st.text_input("🔍 Quick Search (DRN #, Claimant / Et. Al, Station, Status, etc.):", "")[cite: 17]
 
     if search_query:
-        search_mask = df_filtered.astype(str).apply(lambda row: row.str.contains(search_query, case=False).any(), axis=1)
-        df_searched = df_filtered[search_mask]
+        search_mask = df_filtered.astype(str).apply(lambda row: row.str.contains(search_query, case=False).any(), axis=1)[cite: 17]
+        df_searched = df_filtered[search_mask][cite: 17]
     else:
-        df_searched = df_filtered
+        df_searched = df_filtered[cite: 17]
 
-    st.markdown("---")
+    st.markdown("---")[cite: 17]
 
-    st.subheader(f"📋 TEV Claim Records ({len(df_searched)}) — Latest Dates First")
+    st.subheader(f"📋 TEV Claim Records ({len(df_searched)}) — Latest Dates First")[cite: 17]
 
     if df_searched.empty:
-        st.info("Walang nahanap na TEV record batay sa iyong hinahanap.")
+        st.info("Walang nahanap na TEV record batay sa iyong hinahanap.")[cite: 17]
     else:
         for idx, row in df_searched.iterrows():
-            drn_val = clean_val(row.get(drn_col), "N/A")
-            name_val = clean_val(row.get(name_col), "N/A")
-            status_val = clean_val(row.get(overall_status_col), "Logged")
+            drn_val = clean_val(row.get(drn_col), "N/A")[cite: 17]
+            name_val = clean_val(row.get(name_col), "N/A")[cite: 17]
+            status_val = clean_val(row.get(overall_status_col), "Logged")[cite: 17]
 
-            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}"
+            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}"[cite: 17]
 
             with st.expander(expander_title, expanded=False):
-                col_info, col_status, col_attach = st.columns([2, 2, 1.5])
+                col_info, col_status, col_attach = st.columns([2, 2, 1.5])[cite: 17]
 
                 with col_info:
-                    st.markdown("##### 📌 Basic Information")
+                    st.markdown("##### 📌 Basic Information")[cite: 17]
                     for c in df_tev.columns[:6]:
-                        col_label = c if not c.startswith('Unnamed:') else f"Field {c.split(':')[1] if ':' in c else c.split(' ')[1]}"
-                        val_cleaned = clean_val(row[c])
-                        st.write(f"**{col_label}:** {val_cleaned}")
+                        col_label = c if not c.startswith('Unnamed:') else f"Field {c.split(':')[1] if ':' in c else c.split(' ')[1]}"[cite: 17]
+                        val_cleaned = clean_val(row[c])[cite: 17]
+                        st.write(f"**{col_label}:** {val_cleaned}")[cite: 17]
 
                 with col_status:
-                    st.markdown("##### 🏛️ Department Tracking & Remarks")
-                    budget_col = next((c for c in df_tev.columns if 'budget' in c.lower()), None)
-                    acct_col = next((c for c in df_tev.columns if 'account' in c.lower()), None)
-                    cash_col = next((c for c in df_tev.columns if 'cash' in c.lower() or 'treasury' in c.lower()), None)
-                    fin_col = next((c for c in df_tev.columns if 'finance' in c.lower()), None)
-                    rem_col = next((c for c in df_tev.columns if 'remark' in c.lower() or 'note' in c.lower()), None)
+                    st.markdown("##### 🏛️ Department Tracking & Remarks")[cite: 17]
+                    budget_col = next((c for c in df_tev.columns if 'budget' in c.lower()), None)[cite: 17]
+                    acct_col = next((c for c in df_tev.columns if 'account' in c.lower()), None)[cite: 17]
+                    cash_col = next((c for c in df_tev.columns if 'cash' in c.lower() or 'treasury' in c.lower()), None)[cite: 17]
+                    fin_col = next((c for c in df_tev.columns if 'finance' in c.lower()), None)[cite: 17]
+                    rem_col = next((c for c in df_tev.columns if 'remark' in c.lower() or 'note' in c.lower()), None)[cite: 17]
 
-                    b_val = clean_val(row.get(budget_col), "Pending / Process")
-                    a_val = clean_val(row.get(acct_col), "Pending / Process")
-                    c_val = clean_val(row.get(cash_col), "Pending / Process")
-                    f_val = clean_val(row.get(fin_col), "Pending / Process")
+                    b_val = clean_val(row.get(budget_col), "Pending / Process")[cite: 17]
+                    a_val = clean_val(row.get(acct_col), "Pending / Process")[cite: 17]
+                    c_val = clean_val(row.get(cash_col), "Pending / Process")[cite: 17]
+                    f_val = clean_val(row.get(fin_col), "Pending / Process")[cite: 17]
 
-                    st.markdown(f"• **Budget:** `{b_val}`")
-                    st.markdown(f"• **Accounting:** `{a_val}`")
-                    st.markdown(f"• **Cashier:** `{c_val}`")
-                    st.markdown(f"• **Finance:** `{f_val}`")
+                    st.markdown(f"• **Budget:** `{b_val}`")[cite: 17]
+                    st.markdown(f"• **Accounting:** `{a_val}`")[cite: 17]
+                    st.markdown(f"• **Cashier:** `{c_val}`")[cite: 17]
+                    st.markdown(f"• **Finance:** `{f_val}`")[cite: 17]
                     
                     if rem_col and pd.notna(row.get(rem_col)) and str(row.get(rem_col)).lower() != 'nan':
-                        st.info(f"💬 **Remarks:** {row.get(rem_col)}")
+                        st.info(f"💬 **Remarks:** {row.get(rem_col)}")[cite: 17]
 
                 with col_attach:
-                    st.markdown("##### 📎 Attached Document / Et. Al List")
+                    st.markdown("##### 📎 Attached Document / Et. Al List")[cite: 17]
                     
                     found_file = None
                     for cell in row.values:
-                        cell_str = str(cell).strip()
+                        cell_str = str(cell).strip()[cite: 17]
                         if cell_str.lower() != 'nan' and any(ext in cell_str.lower() for ext in ['.jpg', '.jpeg', '.png', '.pdf', 'tev_images', 'documents_files', 'tev_files', 'drive.google']):
                             found_file = cell_str
                             break
                     
-                    embed_link, view_link = format_appsheet_file_url(found_file)
+                    embed_link, view_link = format_appsheet_file_url(found_file)[cite: 17]
 
                     if embed_link or view_link:
-                        st.markdown(f"📄 [**Open / View Attached File / Image**]({view_link})")
+                        st.markdown(f"📄 [**Open / View Attached File / Image**]({view_link})")[cite: 17]
                         if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                            st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)
+                            st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)[cite: 17]
                     else:
-                        st.caption("ℹ️ Walang naka-attach na document o image sa entry na ito.")
+                        st.caption("ℹ️ Walang naka-attach na document o image sa entry na ito.")[cite: 17]
 
-    st.markdown("---")
+    st.markdown("---")[cite: 17]
 
-    tab1, tab2 = st.tabs(["📊 Analytics & Charts", "📥 Raw Masterlist Data"])
+    tab1, tab2 = st.tabs(["📊 Analytics & Charts", "📥 Raw Masterlist Data"])[cite: 17]
 
     with tab1:
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2)[cite: 17]
         with c1:
-            st.subheader("📊 Status Breakdown")
+            st.subheader("📊 Status Breakdown")[cite: 17]
             if overall_status_col:
-                fig1 = px.pie(df_filtered, names=overall_status_col, hole=0.4, color_discrete_sequence=px.colors.qualitative.Set3)
-                fig1.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF")
-                st.plotly_chart(fig1, use_container_width=True)
+                fig1 = px.pie(df_filtered, names=overall_status_col, hole=0.4, color_discrete_sequence=px.colors.qualitative.Dark24)[cite: 1]
+                fig1.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF")[cite: 17]
+                st.plotly_chart(fig1, use_container_width=True)[cite: 17]
 
         with c2:
-            st.subheader("📋 Top Claims Summary")
-            top_records = df_filtered.head(8)
+            st.subheader("📋 Top Claims Summary")[cite: 17]
+            top_records = df_filtered.head(8)[cite: 17]
             if name_col:
-                fig2 = px.bar(top_records, x=drn_col, y=df_filtered.index[:len(top_records)], color_discrete_sequence=['#6FFFE9'])
-                fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF", yaxis_title="Record Index")
-                st.plotly_chart(fig2, use_container_width=True)
+                fig2 = px.bar(top_records, x=drn_col, y=df_filtered.index[:len(top_records)], color_discrete_sequence=['#00F5FF'])[cite: 17]
+                fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF", yaxis_title="Record Index")[cite: 17]
+                st.plotly_chart(fig2, use_container_width=True)[cite: 17]
 
     with tab2:
-        st.subheader("📋 Complete Table Data")
-        st.dataframe(df_filtered, use_container_width=True)
+        st.subheader("📋 Complete Table Data")[cite: 17]
+        st.dataframe(df_filtered, use_container_width=True)[cite: 17]
         
-        csv_data = df_filtered.to_csv(index=False).encode('utf-8')
+        csv_data = df_filtered.to_csv(index=False).encode('utf-8')[cite: 17]
         st.download_button(
             label="📄 Export CSV Report",
             data=csv_data,
             file_name=f"TEV_Report_{datetime.date.today().strftime('%Y%m%d')}.csv",
             mime="text/csv"
-        )
+        )[cite: 17]
 
 else:
-    st.warning("⚠️ Waiting for data from Google Sheets link...")
+    st.warning("⚠️ Waiting for data from Google Sheets link...")[cite: 17]
 
-st.markdown("---")
+st.markdown("---")[cite: 17]
 st.markdown(
     """
     <div style="text-align: center; font-size: 0.85em; color: #E0E6ED; padding-bottom: 20px;">
@@ -382,4 +397,4 @@ st.markdown(
     </div>
     """,
     unsafe_allow_html=True
-)
+)[cite: 17]
