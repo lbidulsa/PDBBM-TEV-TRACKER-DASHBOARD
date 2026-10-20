@@ -1,18 +1,9 @@
 import os
 import datetime
 import re
-import io
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
-# Safe imports para sa Image processing
-try:
-    import requests
-    from PIL import Image, ImageDraw
-    HAS_IMAGE_LIBS = True
-except ImportError:
-    HAS_IMAGE_LIBS = False
 
 # ---------------------------------------------------------
 # 1. PAGE CONFIGURATION
@@ -87,34 +78,6 @@ def format_appsheet_file_url(val):
     appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
     
     return appsheet_url, appsheet_url
-
-# SAFE Image Processor: Masking Amount & Total while keeping Name & Position
-@st.cache_data(ttl=3600)
-def process_and_mask_amount_only(img_url):
-    if not HAS_IMAGE_LIBS:
-        return None
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(img_url, headers=headers, timeout=5)
-        if response.status_code != 200:
-            return None
-            
-        img = Image.open(io.BytesIO(response.content)).convert("RGB")
-        width, height = img.size
-        
-        draw = ImageDraw.Draw(img)
-        
-        # 1. Blackout the AMOUNT column on the right side
-        amount_column_box = (int(width * 0.62), int(height * 0.15), width, height)
-        draw.rectangle(amount_column_box, fill=(8, 12, 20))
-        
-        # 2. Blackout the TOTAL section at the bottom center
-        total_bottom_box = (int(width * 0.35), int(height * 0.45), width, int(height * 0.75))
-        draw.rectangle(total_bottom_box, fill=(8, 12, 20))
-        
-        return img
-    except Exception:
-        return None
 
 def clean_val(val, default="---"):
     if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
@@ -207,6 +170,39 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
     }
     
+    /* 🛡️ IMAGE MASK SHIELD CONTAINER */
+    .img-mask-container {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .img-mask-container img {
+        width: 100%;
+        display: block;
+    }
+    /* Blackout box for Amount Column (Right side) */
+    .mask-amount-col {
+        position: absolute;
+        top: 15%;
+        right: 0;
+        width: 38%;
+        height: 85%;
+        background-color: #080C14;
+        z-index: 10;
+    }
+    /* Blackout box for Total / Slashes (Bottom) */
+    .mask-total-bottom {
+        position: absolute;
+        bottom: 15%;
+        left: 30%;
+        width: 70%;
+        height: 35%;
+        background-color: #080C14;
+        z-index: 11;
+    }
+
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #080C14 !important;
@@ -360,7 +356,7 @@ if not df_tev.empty:
                     b_val = clean_val(row.get(budget_col), "Pending / Process")
                     a_val = clean_val(row.get(acct_col), "Pending / Process")
                     c_val = clean_val(row.get(cash_col), "Pending / Process")
-                    f_val = clean_val(row.get(fin_col), "Pending / Process")
+                    f_val = clean_val(row.get(f_val), "Pending / Process")
 
                     st.markdown(f"• **Budget:** `{b_val}`")
                     st.markdown(f"• **Accounting:** `{a_val}`")
@@ -383,11 +379,15 @@ if not df_tev.empty:
                     embed_link, _ = format_appsheet_file_url(found_file)
 
                     if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                        masked_img = process_and_mask_amount_only(embed_link)
-                        if masked_img:
-                            st.image(masked_img, caption="Et. Al List (Names Visible • Amount Protected)", use_container_width=True)
-                        else:
-                            st.caption("ℹ️ Preview restricted for security.")
+                        # Pure CSS HTML Masking (Zero Crash Risk)
+                        st.markdown(f"""
+                            <div class="img-mask-container">
+                                <img src="{embed_link}" alt="Et. Al Attachment">
+                                <div class="mask-amount-col"></div>
+                                <div class="mask-total-bottom"></div>
+                            </div>
+                            <p style="font-size:0.8em; color:#00F5FF; margin-top:4px;">🔒 <i>Amount & Total Protected (Names/Positions Visible)</i></p>
+                        """, unsafe_allow_html=True)
                     else:
                         st.caption("ℹ️ Walang naka-attach na image preview sa entry na ito.")
 
