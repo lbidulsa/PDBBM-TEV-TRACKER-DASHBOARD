@@ -15,8 +15,10 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GOOGLE SHEETS LIVE CSV LOAD FUNCTION (DIRECT URL)
+# 2. GOOGLE SHEETS LIVE CSV LOAD & APPSHEET PARSER
 # ---------------------------------------------------------
+APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
+
 @st.cache_data(ttl=30)
 def load_tev_data():
     csv_link = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
@@ -28,14 +30,12 @@ def load_tev_data():
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
-# Smart Image / Document URL Parser para sa AppSheet & Google Drive Files
 def format_appsheet_file_url(val):
-    app_name = "PDBBM-RPMODocumentTracker-270708318"
     if pd.isna(val) or not str(val).strip():
         return None, None
     val_str = str(val).strip()
     
-    # 1. Google Drive direct file ID match
+    # Google Drive ID Match
     drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)
     if drive_match:
         file_id = drive_match.group(1)
@@ -43,20 +43,19 @@ def format_appsheet_file_url(val):
         view_url = f"https://drive.google.com/file/d/{file_id}/view"
         return embed_url, view_url
     
-    # 2. Direct Web URL (http/https)
+    # Direct Link
     if val_str.startswith("http://") or val_str.startswith("https://"):
         return val_str, val_str
         
-    # 3. AppSheet Template GetTableFileUrl relative path conversion
+    # AppSheet Template Relative File Path
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
-    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={app_name}&fileName={encoded_path}"
+    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&fileName={encoded_path}"
     return appsheet_url, appsheet_url
 
-# Fetch Live Data
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. HIGH-CONTRAST DARK THEME CUSTOM CSS
+# 3. HIGH-CONTRAST DARK THEME + SIGA-SIGA GLOWING CSS
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -82,7 +81,7 @@ st.markdown("""
     .header-title { font-size: 28px; font-weight: 900; color: #6FFFE9; }
     .header-sub { font-size: 15px; color: #E0E6ED; font-weight: 500; }
 
-    /* High Contrast Metric Cards */
+    /* 🌟 SIGA-SIGA GLOWING METRIC CARDS */
     .metric-card {
         background: #1C2541;
         border: 2px solid #3A506B;
@@ -90,33 +89,45 @@ st.markdown("""
         padding: 16px;
         text-align: center;
         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+    .metric-card:hover {
+        transform: translateY(-4px) scale(1.02) !important;
+        border-color: #6FFFE9 !important;
+        box-shadow: 0 0 20px rgba(111, 255, 233, 0.6), 0 0 30px rgba(111, 255, 233, 0.3) !important;
     }
     .metric-value { font-size: 26px; font-weight: 900; color: #6FFFE9; margin-top: 5px; }
     .metric-label { font-size: 13px; font-weight: 700; color: #FFFFFF; text-transform: uppercase; }
 
-    /* Buttons */
+    /* 🌟 SIGA-SIGA BUTTONS */
     div.stButton > button, div.stDownloadButton > button {
         background-color: #5BC0BE !important;
         color: #0B132B !important;
         font-weight: 800 !important;
         border-radius: 8px !important;
-        border: none !important;
+        border: 1px solid #6FFFE9 !important;
         padding: 10px 20px !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
     }
     div.stButton > button:hover, div.stDownloadButton > button:hover {
         background-color: #6FFFE9 !important;
         color: #000000 !important;
-        box-shadow: 0 0 15px rgba(111, 255, 233, 0.6) !important;
+        box-shadow: 0 0 20px rgba(111, 255, 233, 0.8), 0 0 30px rgba(111, 255, 233, 0.5) !important;
+        transform: translateY(-2px) scale(1.02) !important;
     }
 
-    /* Expander Text Styling */
+    /* 🌟 SIGA-SIGA EXPANDER CARD */
     .stExpander {
         background-color: #1C2541 !important;
         border: 1px solid #3A506B !important;
         border-radius: 10px !important;
+        transition: all 0.3s ease !important;
+    }
+    .stExpander:hover {
+        border-color: #6FFFE9 !important;
+        box-shadow: 0 0 15px rgba(111, 255, 233, 0.4) !important;
     }
     
-    /* Global Text Color Fix */
     label, p, span, h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
     }
@@ -158,7 +169,7 @@ st.sidebar.markdown(
 )
 
 # ---------------------------------------------------------
-# 5. MAIN HEADER & DASHBOARD BODY
+# 5. MAIN HEADER & DASHBOARD
 # ---------------------------------------------------------
 st.markdown("""
     <div class="header-card">
@@ -173,17 +184,25 @@ if not df_tev.empty:
     else:
         df_filtered = df_tev.copy()
 
-    # Column Mappings
-    drn_col = next((c for c in df_tev.columns if 'drn' in c.lower() or 'voucher' in c.lower() or 'id' in c.lower()), df_tev.columns[0])
-    name_col = next((c for c in df_tev.columns if 'et.al' in c.lower() or 'etal' in c.lower() or 'name' in c.lower() or 'payee' in c.lower() or 'claimant' in c.lower()), df_tev.columns[1] if len(df_tev.columns) > 1 else df_tev.columns[0])
+    # Smart Auto-Detect Columns based on row content
+    drn_col = df_tev.columns[0]
+    
+    # Priority search for Claimant/Et.Al Column (matches text containing 'et.al' or 'Dharyl' patterns)
+    name_col = None
+    for c in df_tev.columns:
+        if df_tev[c].astype(str).str.contains('et.al|et al|Dharyl|Claimant', case=False, na=False).any():
+            name_col = c
+            break
+    if not name_col:
+        name_col = df_tev.columns[3] if len(df_tev.columns) > 3 else df_tev.columns[1]
+
     amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'tev' in c.lower() or 'total' in c.lower()), None)
     overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
-    img_col = next((c for c in df_tev.columns if 'image' in c.lower() or 'attach' in c.lower() or 'photo' in c.lower() or 'file' in c.lower() or 'picture' in c.lower()), None)
 
     if amt_col:
         df_filtered[amt_col] = pd.to_numeric(df_filtered[amt_col].astype(str).str.replace(',', '').str.replace('₱', ''), errors='coerce').fillna(0)
 
-    # Top Metric Cards
+    # Metrics
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
@@ -219,7 +238,7 @@ if not df_tev.empty:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Instant Search Bar
+    # Search Bar
     search_query = st.text_input("🔍 Quick Search (DRN #, Claimant / Et. Al, Station, Status, etc.):", "")
 
     if search_query:
@@ -239,11 +258,10 @@ if not df_tev.empty:
         for idx, row in df_searched.iterrows():
             drn_val = str(row.get(drn_col, 'N/A'))
             name_val = str(row.get(name_col, 'N/A'))
-            amt_val = f"₱{float(row.get(amt_col, 0)):,.2f}" if amt_col else "N/A"
-            status_val = str(row.get(overall_status_col, 'In Process')) if overall_status_col else 'Logged'
+            status_val = str(row.get(overall_status_col, 'Logged')) if overall_status_col else 'Logged'
 
-            # Header format: DRN | Name (Et. Al) | Amount | Status
-            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}  |  Amount: {amt_val}  |  Status: {status_val}"
+            # Header Format: DRN | Claimant/Et.Al
+            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}  |  Status: {status_val}"
 
             with st.expander(expander_title, expanded=False):
                 col_info, col_status, col_attach = st.columns([2, 2, 1.5])
@@ -251,7 +269,8 @@ if not df_tev.empty:
                 with col_info:
                     st.markdown("##### 📌 Basic Information")
                     for c in df_tev.columns[:6]:
-                        st.write(f"**{c}:** {row[c]}")
+                        col_label = c if not c.startswith('Unnamed:') else f"Field {c.split(':')[1] if ':' in c else c.split(' ')[1]}"
+                        st.write(f"**{col_label}:** {row[c]}")
 
                 with col_status:
                     st.markdown("##### 🏛️ Department Tracking & Remarks")
@@ -271,19 +290,26 @@ if not df_tev.empty:
 
                 with col_attach:
                     st.markdown("##### 📎 Attached Document / Et. Al List")
-                    img_val = row.get(img_col) if img_col else None
-                    embed_link, view_link = format_appsheet_file_url(img_val)
+                    
+                    # Scan ALL row values to find image / document file paths
+                    found_file = None
+                    for cell in row.values:
+                        cell_str = str(cell).strip()
+                        if any(ext in cell_str.lower() for ext in ['.jpg', '.jpeg', '.png', '.pdf', 'tev_images', 'documents_files', 'drive.google']):
+                            found_file = cell_str
+                            break
+                    
+                    embed_link, view_link = format_appsheet_file_url(found_file)
 
                     if embed_link or view_link:
                         st.markdown(f"📄 [**Open / View Attached File**]({view_link})")
-                        if embed_link and any(ext in str(img_val).lower() for ext in ['.jpg', '.jpeg', '.png']):
+                        if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
                             st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)
                     else:
                         st.caption("ℹ️ Walay naka-attach nga document o image sa kining nga entry.")
 
     st.markdown("---")
 
-    # Analytics & Masterlist Tabs
     tab1, tab2 = st.tabs(["📊 Analytics & Charts", "📥 Raw Masterlist Data"])
 
     with tab1:
