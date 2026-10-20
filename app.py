@@ -2,11 +2,17 @@ import os
 import datetime
 import re
 import io
-import requests
-from PIL import Image, ImageDraw
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+
+# Safe imports para sa Image processing
+try:
+    import requests
+    from PIL import Image, ImageDraw
+    HAS_IMAGE_LIBS = True
+except ImportError:
+    HAS_IMAGE_LIBS = False
 
 # ---------------------------------------------------------
 # 1. PAGE CONFIGURATION
@@ -82,11 +88,14 @@ def format_appsheet_file_url(val):
     
     return appsheet_url, appsheet_url
 
-# Helper Function para I-retain ang NAME & POSITION lang (AMOUNT COLUMN & TOTAL ARE BLACKED OUT)
+# SAFE Image Processor: Masking Amount & Total while keeping Name & Position
 @st.cache_data(ttl=3600)
 def process_and_mask_amount_only(img_url):
+    if not HAS_IMAGE_LIBS:
+        return None
     try:
-        response = requests.get(img_url, timeout=10)
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(img_url, headers=headers, timeout=5)
         if response.status_code != 200:
             return None
             
@@ -95,11 +104,11 @@ def process_and_mask_amount_only(img_url):
         
         draw = ImageDraw.Draw(img)
         
-        # 1. Mask the AMOUNT column on the right side (Mula 62% sa width hanggang sa tuo)
+        # 1. Blackout the AMOUNT column on the right side
         amount_column_box = (int(width * 0.62), int(height * 0.15), width, height)
         draw.rectangle(amount_column_box, fill=(8, 12, 20))
         
-        # 2. Mask the TOTAL section at the bottom center
+        # 2. Blackout the TOTAL section at the bottom center
         total_bottom_box = (int(width * 0.35), int(height * 0.45), width, int(height * 0.75))
         draw.rectangle(total_bottom_box, fill=(8, 12, 20))
         
@@ -374,12 +383,11 @@ if not df_tev.empty:
                     embed_link, _ = format_appsheet_file_url(found_file)
 
                     if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                        # Masking Amount & Total only while keeping Name & Position visible
                         masked_img = process_and_mask_amount_only(embed_link)
                         if masked_img:
-                            st.image(masked_img, caption="Et. Al List (Names & Positions Visible • Amount Masked)", use_container_width=True)
+                            st.image(masked_img, caption="Et. Al List (Names Visible • Amount Protected)", use_container_width=True)
                         else:
-                            st.caption("ℹ️ Unable to load image preview.")
+                            st.caption("ℹ️ Preview restricted for security.")
                     else:
                         st.caption("ℹ️ Walang naka-attach na image preview sa entry na ito.")
 
