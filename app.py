@@ -1,6 +1,9 @@
 import os
 import datetime
 import re
+import io
+import requests
+from PIL import Image, ImageFilter, ImageDraw
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -78,6 +81,35 @@ def format_appsheet_file_url(val):
     appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
     
     return appsheet_url, appsheet_url
+
+# Helper Function para i-super blur / i-mask ang AMOUNT section ng attachment image
+@st.cache_data(ttl=3600)
+def process_and_mask_amount_image(img_url):
+    try:
+        response = requests.get(img_url, timeout=10)
+        if response.status_code != 200:
+            return img_url
+            
+        img = Image.open(io.BytesIO(response.content)).convert("RGB")
+        width, height = img.size
+        
+        # Target Region: AMOUNT column & Total Slashes (Gitna papuntang Kanan at Ibaba)
+        # Bounding Box Coordinates: (left, top, right, bottom)
+        box = (int(width * 0.42), int(height * 0.25), int(width * 0.78), int(height * 0.70))
+        
+        # Heavy Blur Processing
+        cropped_part = img.crop(box)
+        blurred_part = cropped_part.filter(ImageFilter.GaussianBlur(radius=35))
+        img.paste(blurred_part, box)
+        
+        # Maglagay ng semi-transparent dark overlay para siguradong hindi na mabasa
+        draw = ImageDraw.Draw(img, "RGBA")
+        draw.rectangle(box, fill=(15, 23, 42, 180))
+        
+        return img
+    except Exception:
+        # Fallback kung sakaling mag-error sa pag-fetch ng raw image
+        return img_url
 
 def clean_val(val, default="---"):
     if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
@@ -348,7 +380,9 @@ if not df_tev.empty:
                     if embed_link or view_link:
                         st.markdown(f"📄 [**Open / View Attached File / Image**]({view_link})")
                         if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                            st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)
+                            # Processing Image Mask
+                            masked_img = process_and_mask_amount_image(embed_link)
+                            st.image(masked_img, caption="Et. Al List Preview (Amount Protected)", use_container_width=True)
                     else:
                         st.caption("ℹ️ Walang naka-attach na document o image sa entry na ito.")
 
