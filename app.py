@@ -76,7 +76,7 @@ def format_appsheet_file_url(val):
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
     return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
-# 🎯 Clean Physical Crop Function (I-crop ra ang gi-red box nga bahin: Header + Names + Inclusive Dates)
+# 🎯 Clean Physical Crop Function (Red Box Area: Header + Names + Inclusive Dates)
 @st.cache_data(ttl=3600)
 def get_clean_boxed_crop(img_url):
     try:
@@ -88,8 +88,7 @@ def get_clean_boxed_crop(img_url):
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
         width, height = img.size
         
-        # Precise Bounding Box para makuha ra ang Red Box Area (Walang Amount & Slashes)
-        # Left: 0, Top: 0, Right: 67% width, Bottom: 88% height
+        # Crop Area: Top-Left to 67% Width and 88% Height (Excludes Amount & Slashes)
         crop_area = (0, 0, int(width * 0.67), int(height * 0.88))
         cropped_img = img.crop(crop_area)
         
@@ -105,7 +104,7 @@ def clean_val(val, default="---"):
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. HIGH-CONTRAST NEON CYBERPUNK THEME
+# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + SIGA-SIGA CSS
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -115,11 +114,13 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
+    /* Deep Obsidian Background */
     .stApp { 
         background-color: #080C14 !important; 
         color: #FFFFFF !important;
     }
     
+    /* Neon Header Card */
     .header-card {
         background: linear-gradient(135deg, #0F172A 0%, #1E1035 100%);
         border: 2px solid #00F5FF;
@@ -131,6 +132,7 @@ st.markdown("""
     .header-title { font-size: 30px; font-weight: 900; color: #00F5FF; text-shadow: 0 0 10px rgba(0, 245, 255, 0.6); }
     .header-sub { font-size: 15px; color: #E2E8F0; font-weight: 500; }
 
+    /* 🌟 CATCHY NEON METRIC CARDS WITH GLOW */
     .metric-card {
         background: #0F172A;
         border: 2px solid #1E293B;
@@ -138,24 +140,54 @@ st.markdown("""
         padding: 18px;
         text-align: center;
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
     }
-    .metric-value { font-size: 28px; font-weight: 900; color: #00F5FF; margin-top: 5px; }
-    .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; }
+    .metric-card:hover {
+        transform: translateY(-5px) scale(1.02) !important;
+        border-color: #39FF14 !important;
+        box-shadow: 0 0 25px rgba(57, 255, 20, 0.6), 0 0 35px rgba(0, 245, 255, 0.4) !important;
+    }
+    .metric-value { 
+        font-size: 28px; 
+        font-weight: 900; 
+        color: #00F5FF; 
+        margin-top: 5px;
+        text-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
+    }
+    .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; }
 
+    /* 🌟 NEON MAGENTA BUTTONS */
     div.stButton > button, div.stDownloadButton > button {
         background: linear-gradient(135deg, #FF007F 0%, #7928CA 100%) !important;
         color: #FFFFFF !important;
         font-weight: 800 !important;
         border-radius: 10px !important;
         border: 1px solid #FF007F !important;
+        padding: 10px 22px !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        box-shadow: 0 0 15px rgba(255, 0, 127, 0.4) !important;
+    }
+    div.stButton > button:hover, div.stDownloadButton > button:hover {
+        background: linear-gradient(135deg, #00F5FF 0%, #0070F3 100%) !important;
+        color: #000000 !important;
+        border-color: #00F5FF !important;
+        box-shadow: 0 0 25px rgba(0, 245, 255, 0.9), 0 0 35px rgba(57, 255, 20, 0.6) !important;
+        transform: translateY(-3px) scale(1.03) !important;
     }
 
+    /* 🌟 NEON EXPANDER CARD */
     .stExpander {
         background-color: #0F172A !important;
         border: 1px solid #1E293B !important;
         border-radius: 12px !important;
+        transition: all 0.3s ease !important;
     }
-
+    .stExpander:hover {
+        border-color: #FF007F !important;
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
+    }
+    
+    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #080C14 !important;
         border-right: 1px solid #1E293B;
