@@ -1,3 +1,4 @@
+import os
 import datetime
 import re
 import pandas as pd
@@ -27,16 +28,16 @@ def load_tev_data():
         df = pd.read_csv(PUBLISHED_CSV_URL)
         df.columns = [str(col).strip() for col in df.columns]
         
-        # 1. Tangtangon ang mga tinuod nga haw-ang/empty rows
+        # 1. Alisin ang mga walang nilalaman na empty rows
         df = df.dropna(how='all')
         
-        # Detect DRN ug Name Column
+        # Detect DRN at Name Column
         drn_c = df.columns[0]
         
-        # Tangtangon ang mga rows nga walang DRN o N/A tanan
+        # Alisin ang mga rows na walang DRN
         df = df[df[drn_c].notna() & (df[drn_c].astype(str).str.strip() != '') & (df[drn_c].astype(str).str.strip().str.upper() != 'NAN')]
         
-        # 2. Smart Date Parsing para ma-sort ang latest Date/October first
+        # 2. Smart Date Parsing para mauna ang pinakabagong date (October)
         date_c = None
         for c in df.columns:
             if any(k in c.lower() for k in ['date', 'time', 'received', 'created']):
@@ -47,17 +48,16 @@ def load_tev_data():
             
         if date_c:
             df['parsed_date'] = pd.to_datetime(df[date_c], errors='coerce')
-            # Sort descending: Pinaka-latest nga Date / October mag-una
             df = df.sort_values(by='parsed_date', ascending=False, na_position='last').drop(columns=['parsed_date'])
         else:
-            df = df.iloc[::-1] # Fallback reverse
+            df = df.iloc[::-1]
             
         return df.reset_index(drop=True)
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
-# Smart URL Parser for AppSheet & Drive Link
+# Smart URL Parser para sa AppSheet & Drive Link
 def format_appsheet_file_url(val):
     if pd.isna(val) or not str(val).strip() or str(val).lower() == 'nan':
         return None, None
@@ -87,7 +87,7 @@ def clean_val(val, default="---"):
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. HIGH-CONTRAST DARK THEME + SIGA-SIGA GLOWING CSS
+# 3. CUSTOM CSS AND GLOWING EFFECTS
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -167,8 +167,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. SIDEBAR NAVIGATION
+# 4. SIDEBAR NAVIGATION WITH LOGO
 # ---------------------------------------------------------
+# Dagdag ng Logo sa Sidebar
+logo_path = "logo.png"
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, use_container_width=True)
+elif os.path.exists("Peace and Dev LOGO.jpg"):
+    st.sidebar.image("Peace and Dev LOGO.jpg", use_container_width=True)
+
 st.sidebar.markdown("### ✈️ PDBBM TEV Portal")
 st.sidebar.caption("AppSheet Live Synchronization")
 st.sidebar.markdown("---")
@@ -216,16 +223,12 @@ if not df_tev.empty:
     else:
         df_filtered = df_tev.copy()
 
-    # Column Auto-Detect
     drn_col = df_tev.columns[0]
-    
-    # Priority detector para sa Field 3 / Claimant/Et.Al column
     name_col = df_tev.columns[3] if len(df_tev.columns) > 3 else df_tev.columns[1]
 
     amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'cost' in c.lower() or 'total' in c.lower()), None)
     overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
 
-    # Calculate DISTINCT metrics (walay duplicate numbers)
     attach_count = sum(1 for _, r in df_filtered.iterrows() if any(ext in str(v).lower() for v in r.values for ext in ['.jpg', '.png', '.pdf', 'tev_images', 'documents_files']))
     acct_count = sum(1 for _, r in df_filtered.iterrows() if 'acct' in str(r.values).lower() or 'accounting' in str(r.values).lower())
     fin_count = sum(1 for _, r in df_filtered.iterrows() if 'finance' in str(r.values).lower())
@@ -262,7 +265,6 @@ if not df_tev.empty:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Search Bar
     search_query = st.text_input("🔍 Quick Search (DRN #, Claimant / Et. Al, Station, Status, etc.):", "")
 
     if search_query:
@@ -273,18 +275,16 @@ if not df_tev.empty:
 
     st.markdown("---")
 
-    # Interactive Records List (Sorted: Latest October First)
     st.subheader(f"📋 TEV Claim Records ({len(df_searched)}) — Latest Dates First")
 
     if df_searched.empty:
-        st.info("Walay nakita nga TEV record base sa imong gi-search.")
+        st.info("Walang nahanap na TEV record batay sa iyong hinahanap.")
     else:
         for idx, row in df_searched.iterrows():
             drn_val = clean_val(row.get(drn_col), "N/A")
             name_val = clean_val(row.get(name_col), "N/A")
             status_val = clean_val(row.get(overall_status_col), "Logged")
 
-            # Header Format
             expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}"
 
             with st.expander(expander_title, expanded=False):
@@ -335,7 +335,7 @@ if not df_tev.empty:
                         if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
                             st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)
                     else:
-                        st.caption("ℹ️ Walay naka-attach nga document o image sa kining nga entry.")
+                        st.caption("ℹ️ Walang naka-attach na document o image sa entry na ito.")
 
     st.markdown("---")
 
