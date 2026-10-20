@@ -356,7 +356,7 @@ if not df_tev.empty:
                     b_val = clean_val(row.get(budget_col), "Pending / Process")
                     a_val = clean_val(row.get(acct_col), "Pending / Process")
                     c_val = clean_val(row.get(cash_col), "Pending / Process")
-                    f_val = clean_val(row.get(f_val), "Pending / Process")
+                    f_val = clean_val(row.get(fin_col), "Pending / Process")
 
                     st.markdown(f"• **Budget:** `{b_val}`")
                     st.markdown(f"• **Accounting:** `{a_val}`")
@@ -379,7 +379,6 @@ if not df_tev.empty:
                     embed_link, _ = format_appsheet_file_url(found_file)
 
                     if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                        # Pure CSS HTML Masking (Zero Crash Risk)
                         st.markdown(f"""
                             <div class="img-mask-container">
                                 <img src="{embed_link}" alt="Et. Al Attachment">
