@@ -3,7 +3,7 @@ import datetime
 import re
 import io
 import requests
-from PIL import Image
+from PIL import Image, ImageDraw
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -82,7 +82,7 @@ def format_appsheet_file_url(val):
     
     return appsheet_url, appsheet_url
 
-# Helper Function para i-crop ang TAAS nga bahin ra sa image (NAMES/ET.AL ONLY)
+# Helper Function para i-crop & I-mask ang AMOUNT section (STRICT NAME ONLY PROTECTION)
 @st.cache_data(ttl=3600)
 def process_and_crop_names_only(img_url):
     try:
@@ -93,10 +93,16 @@ def process_and_crop_names_only(img_url):
         img = Image.open(io.BytesIO(response.content)).convert("RGB")
         width, height = img.size
         
-        # PAMAAGI B: I-crop ra ang TAAS/GITNA nga bahin kung diin naa ang pangalan (Top 0% to 45%)
-        # Sigurado nga putol ang ubos diin nahimutang ang Amount, Total, ug Slashes
-        crop_box = (0, 0, width, int(height * 0.45))
+        # 1. Physical Height Cut (Top 35% ra - I-cut ang Total ug signature)
+        crop_box = (0, 0, width, int(height * 0.38))
         cropped_img = img.crop(crop_box)
+        
+        # 2. Hard Black Box Masking sa Right Column (Pwesto sa Amount Column)
+        c_width, c_height = cropped_img.size
+        draw = ImageDraw.Draw(cropped_img)
+        # Tabunan og solid black/dark navy ang right 30% sang width diin naa ang Amount
+        mask_box = (int(c_width * 0.68), 0, c_width, c_height)
+        draw.rectangle(mask_box, fill=(8, 12, 20))
         
         return cropped_img
     except Exception:
@@ -369,10 +375,10 @@ if not df_tev.empty:
                     embed_link, _ = format_appsheet_file_url(found_file)
 
                     if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                        # Auto-crop Top Portion Only (Names/Et.Al)
+                        # Auto-crop Top Portion Only + Side Masking (Names/Et.Al Only)
                         cropped_img = process_and_crop_names_only(embed_link)
                         if cropped_img:
-                            st.image(cropped_img, caption="Et. Al Verification Preview (Names Only)", use_container_width=True)
+                            st.image(cropped_img, caption="Et. Al Verification Preview (Names Only - Protected)", use_container_width=True)
                         else:
                             st.caption("ℹ️ Unable to load image preview.")
                     else:
