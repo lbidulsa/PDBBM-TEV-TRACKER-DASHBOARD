@@ -15,41 +15,50 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GOOGLE SHEETS LIVE CSV LOAD & APPSHEET PARSER
+# 2. APPSHEET & GOOGLE SHEETS LIVE SYNC CONFIGURATION
 # ---------------------------------------------------------
+PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
 APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
+APPSHEET_TABLE_NAME = "TEV"  # Exact Table Name gikan sa AppSheet Data Tab!
+
+# Google Drive Direct Folder Base Links
+TEV_FILES_FOLDER_ID = "1gid7M0TB_CDWE0svVEw5z09W46v_0k8v"
+TEV_IMAGES_FOLDER_ID = "1YyRCgSik594D234grSjYVX5QwWXRCPPM"
 
 @st.cache_data(ttl=30)
 def load_tev_data():
-    csv_link = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
     try:
-        df = pd.read_csv(csv_link)
+        df = pd.read_csv(PUBLISHED_CSV_URL)
         df.columns = [str(col).strip() for col in df.columns]
         return df
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
+# Smart Image / Document URL Parser gamit ang Saktong AppSheet Table Name & Drive Fallback
 def format_appsheet_file_url(val):
     if pd.isna(val) or not str(val).strip():
         return None, None
     val_str = str(val).strip()
     
-    # 1. Google Drive direct file ID match
+    # 1. Direct Web Link (http/https)
+    if val_str.startswith("http://") or val_str.startswith("https://"):
+        return val_str, val_str
+
+    # 2. Google Drive direct file ID match
     drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)
     if drive_match:
         file_id = drive_match.group(1)
         embed_url = f"https://drive.google.com/uc?export=view&id={file_id}"
         view_url = f"https://drive.google.com/file/d/{file_id}/view"
         return embed_url, view_url
-    
-    # 2. Direct Web Link
-    if val_str.startswith("http://") or val_str.startswith("https://"):
-        return val_str, val_str
-        
-    # 3. AppSheet Template Relative File Path (Unsigned URL construct)
+
+    # 3. AppSheet Official gettablefileurl with AppName, TableName, ug FileName
+    encoded_table = APPSHEET_TABLE_NAME.replace(" ", "%20")
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
-    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&fileName={encoded_path}"
+    
+    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
+    
     return appsheet_url, appsheet_url
 
 df_tev = load_tev_data()
@@ -169,12 +178,12 @@ st.sidebar.markdown(
 )
 
 # ---------------------------------------------------------
-# 5. MAIN HEADER & DASHBOARD
+# 5. MAIN HEADER & EXECUTIVE DASHBOARD
 # ---------------------------------------------------------
 st.markdown("""
     <div class="header-card">
         <div class="header-title">✈️ PDBBM TEV Executive Tracker</div>
-        <div class="header-sub">Live Executive Dashboard • AppSheet Connected</div>
+        <div class="header-sub">Live Executive Dashboard • AppSheet Table Connected</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -184,13 +193,13 @@ if not df_tev.empty:
     else:
         df_filtered = df_tev.copy()
 
-    # Smart Column Detect
+    # Smart Auto-Detect Columns
     drn_col = df_tev.columns[0]
     
-    # Priority search for Claimant/Et.Al Column
+    # Claimant/Et.Al Column priority detect
     name_col = None
     for c in df_tev.columns:
-        if df_tev[c].astype(str).str.contains('et.al|et al|Claimant', case=False, na=False).any():
+        if df_tev[c].astype(str).str.contains('et.al|et al|Dharyl|Claimant', case=False, na=False).any():
             name_col = c
             break
     if not name_col:
@@ -202,7 +211,7 @@ if not df_tev.empty:
     if amt_col:
         df_filtered[amt_col] = pd.to_numeric(df_filtered[amt_col].astype(str).str.replace(',', '').str.replace('₱', ''), errors='coerce').fillna(0)
 
-    # Top Metric Cards
+    # Top Metrics
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
@@ -249,7 +258,7 @@ if not df_tev.empty:
 
     st.markdown("---")
 
-    # Interactive Records
+    # Interactive Records Card
     st.subheader(f"📋 TEV Claim Records ({len(df_searched)})")
 
     if df_searched.empty:
@@ -258,11 +267,10 @@ if not df_tev.empty:
         for idx, row in df_searched.iterrows():
             drn_val = str(row.get(drn_col, 'N/A'))
             name_val = str(row.get(name_col, 'N/A'))
-            amt_val = f"₱{float(row.get(amt_col, 0)):,.2f}" if amt_col else ""
             status_val = str(row.get(overall_status_col, 'Logged')) if overall_status_col else 'Logged'
 
             # Header Format
-            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val} {f'| Amount: {amt_val}' if amt_val else ''}  |  Status: {status_val}"
+            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}  |  Status: {status_val}"
 
             with st.expander(expander_title, expanded=False):
                 col_info, col_status, col_attach = st.columns([2, 2, 1.5])
@@ -292,18 +300,18 @@ if not df_tev.empty:
                 with col_attach:
                     st.markdown("##### 📎 Attached Document / Et. Al List")
                     
-                    # Scan row to auto-detect attachment file/image link
+                    # Scan row to find image/document file paths
                     found_file = None
                     for cell in row.values:
                         cell_str = str(cell).strip()
-                        if any(ext in cell_str.lower() for ext in ['.jpg', '.jpeg', '.png', '.pdf', 'tev_images', 'documents_files', 'doc_images', 'drive.google']):
+                        if any(ext in cell_str.lower() for ext in ['.jpg', '.jpeg', '.png', '.pdf', 'tev_images', 'documents_files', 'tev_files', 'drive.google']):
                             found_file = cell_str
                             break
                     
                     embed_link, view_link = format_appsheet_file_url(found_file)
 
                     if embed_link or view_link:
-                        st.markdown(f"📄 [**Click Here to Open Attached File / Image**]({view_link})")
+                        st.markdown(f"📄 [**Open / View Attached File / Image**]({view_link})")
                         if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
                             st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)
                     else:
