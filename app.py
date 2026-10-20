@@ -15,6 +15,36 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
+# GOOGLE SHEETS LIVE CSV LINK & DATA LOAD FUNCTION
+# ---------------------------------------------------------
+PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
+
+@st.cache_data(ttl=30)
+def load_tev_data():
+    try:
+        df = pd.read_csv(PUBLISHED_CSV_URL)
+        df.columns = [str(col).strip() for col in df.columns]
+        return df
+    except Exception as e:
+        st.error(f"Error connecting to Google Sheets: {e}")
+        return pd.DataFrame()
+
+# Helper function to convert Google Drive / AppSheet image links to direct image URLs
+def format_drive_image_url(url_str):
+    if pd.isna(url_str) or not isinstance(url_str, str):
+        return None
+    url_str = url_str.strip()
+    match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', url_str)
+    if match:
+        file_id = match.group(1)
+        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w800"
+    if url_str.startswith("http"):
+        return url_str
+    return None
+
+df_tev = load_tev_data()
+
+# ---------------------------------------------------------
 # MODERN NEW LOOK CUSTOM CSS & GLOW EFFECTS
 # ---------------------------------------------------------
 st.markdown("""
@@ -60,19 +90,6 @@ st.markdown("""
     .metric-value { font-size: 26px; font-weight: 800; color: #F8FAFC; margin: 8px 0; }
     .metric-label { font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; }
 
-    /* Tracking Status Badges */
-    .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-    .badge-approved { background: rgba(34, 197, 94, 0.2); color: #4ADE80; border: 1px solid #22C55E; }
-    .badge-pending { background: rgba(234, 179, 8, 0.2); color: #FACC15; border: 1px solid #EAB308; }
-    .badge-process { background: rgba(56, 189, 248, 0.2); color: #38BDF8; border: 1px solid #38BDF8; }
-
     /* Buttons Style */
     div.stButton > button, div.stDownloadButton > button {
         background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
@@ -104,36 +121,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# LIVE DATA LOAD
-# ---------------------------------------------------------
-PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"[cite: 5]
-
-@st.cache_data(ttl=30)
-def load_tev_data():
-    try:
-        df = pd.read_csv(PUBLISHED_CSV_URL)[cite: 5]
-        df.columns = [str(col).strip() for col in df.columns][cite: 5]
-        return df
-    except Exception as e:
-        st.error(f"Error connecting to Google Sheets: {e}")
-        return pd.DataFrame()
-
-# Helper function to convert Google Drive / AppSheet image links to direct image URLs
-def format_drive_image_url(url_str):
-    if pd.isna(url_str) or not isinstance(url_str, str):
-        return None
-    url_str = url_str.strip()
-    match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', url_str)
-    if match:
-        file_id = match.group(1)
-        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w800"
-    if url_str.startswith("http"):
-        return url_str
-    return None
-
-df_tev = load_tev_data()
 
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION & FILTERS
@@ -180,26 +167,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 if not df_tev.empty:
-    # Filter data by Program if selected
     if selected_program != "All Programs" and program_col:
         df_filtered = df_tev[df_tev[program_col].astype(str) == selected_program].copy()
     else:
         df_filtered = df_tev.copy()
 
-    # Column mappings
     drn_col = next((c for c in df_tev.columns if 'drn' in c.lower() or 'voucher' in c.lower() or 'id' in c.lower()), df_tev.columns[0])
     name_col = next((c for c in df_tev.columns if 'name' in c.lower() or 'payee' in c.lower() or 'claimant' in c.lower() or 'personnel' in c.lower()), df_tev.columns[1] if len(df_tev.columns) > 1 else df_tev.columns[0])
     amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'tev' in c.lower() or 'total' in c.lower()), None)
     overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
     img_col = next((c for c in df_tev.columns if 'image' in c.lower() or 'attach' in c.lower() or 'photo' in c.lower() or 'et.al' in c.lower() or 'file' in c.lower()), None)
 
-    # Clean amount column
     if amt_col:
         df_filtered[amt_col] = pd.to_numeric(df_filtered[amt_col].astype(str).str.replace(',', '').str.replace('₱', ''), errors='coerce').fillna(0)
 
-    # ---------------------------------------------------------
-    # TOP METRIC CARDS
-    # ---------------------------------------------------------
+    # Top Metric Cards
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
@@ -235,9 +217,7 @@ if not df_tev.empty:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ---------------------------------------------------------
-    # SEARCH BAR (DRN #, Name, Station, etc.)
-    # ---------------------------------------------------------
+    # Search Bar
     search_query = st.text_input("🔍 Quick Search Voucher (Type DRN #, Claimant Name, Station, or Key terms):", "")
 
     if search_query:
@@ -248,9 +228,7 @@ if not df_tev.empty:
 
     st.markdown("---")
 
-    # ---------------------------------------------------------
-    # INTERACTIVE TEV CARDS WITH DEPARTMENT PIPELINE & ATTACHMENTS
-    # ---------------------------------------------------------
+    # Interactive Cards
     st.subheader(f"📋 TEV Claim Records ({len(df_searched)})")
 
     if df_searched.empty:
@@ -262,23 +240,19 @@ if not df_tev.empty:
             amt_val = f"₱{float(row.get(amt_col, 0)):,.2f}" if amt_col else "N/A"
             status_val = str(row.get(overall_status_col, 'In Process')) if overall_status_col else 'Logged'
 
-            # Header label for expander
             expander_title = f"📄 DRN: {drn_val} | Claimant: {name_val} | Amount: {amt_val} | Status: {status_val}"
 
             with st.expander(expander_title, expanded=False):
                 col_info, col_status, col_attach = st.columns([2, 2, 1.5])
 
-                # Column 1: Voucher Basic Info
                 with col_info:
                     st.markdown("##### 📌 Voucher Details")
                     for c in df_tev.columns[:6]:
                         st.write(f"**{c}:** {row[c]}")
 
-                # Column 2: Department Status & Remarks (Budget, Accounting, Cash, Finance)
                 with col_status:
                     st.markdown("##### 🏛️ Department Tracking & Remarks")
                     
-                    # Auto-detect department specific columns if they exist in Google Sheet
                     budget_col = next((c for c in df_tev.columns if 'budget' in c.lower()), None)
                     acct_col = next((c for c in df_tev.columns if 'account' in c.lower()), None)
                     cash_col = next((c for c in df_tev.columns if 'cash' in c.lower() or 'treasury' in c.lower()), None)
@@ -293,7 +267,6 @@ if not df_tev.empty:
                     if rem_col and pd.notna(row.get(rem_col)):
                         st.info(f"💬 **Department Remarks:** {row.get(rem_col)}")
 
-                # Column 3: AppSheet Image Attachment (Et. Al List / Documents)
                 with col_attach:
                     st.markdown("##### 📎 Attached Document / Et. Al List")
                     if img_col and pd.notna(row.get(img_col)):
@@ -310,9 +283,6 @@ if not df_tev.empty:
 
     st.markdown("---")
 
-    # ---------------------------------------------------------
-    # CHARTS & EXPORT MASTERLIST
-    # ---------------------------------------------------------
     tab1, tab2 = st.tabs(["📊 Analytics & Charts", "📥 Full Table Data Export"])
 
     with tab1:
