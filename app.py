@@ -5,7 +5,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# PAGE CONFIGURATION
+# 1. PAGE CONFIGURATION (DAPAT UNANG-UNA!)
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="PDBBM TEV Executive Tracker",
@@ -15,11 +15,9 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS LIVE CSV LINK & DATA LOAD
+# 2. GOOGLE SHEETS LIVE CSV LINK & APPSHEET CONFIG
 # ---------------------------------------------------------
 PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"[cite: 5]
-
-# Exact App Name gikan sa imong AppSheet link
 APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
 
 @st.cache_data(ttl=30)
@@ -55,10 +53,11 @@ def format_appsheet_file_url(val):
     appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&fileName={encoded_path}"
     return appsheet_url, appsheet_url
 
+# Load Data
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# HIGH-CONTRAST DARK THEME CUSTOM CSS (KLARO ANG TEXT)
+# 3. HIGH-CONTRAST DARK THEME CUSTOM CSS
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -126,7 +125,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SIDEBAR NAVIGATION
+# 4. SIDEBAR NAVIGATION
 # ---------------------------------------------------------
 st.sidebar.markdown("### ✈️ PDBBM TEV Portal")
 st.sidebar.caption("AppSheet Live Synchronization")
@@ -160,7 +159,7 @@ st.sidebar.markdown(
 )
 
 # ---------------------------------------------------------
-# MAIN HEADER
+# 5. MAIN HEADER
 # ---------------------------------------------------------
 st.markdown("""
     <div class="header-card">
