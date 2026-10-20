@@ -95,11 +95,11 @@ def process_and_mask_amount_only(img_url):
         
         draw = ImageDraw.Draw(img)
         
-        # 1. Mask the AMOUNT column on the right side (Mula 65% sa width hanggang sa tuo)
+        # 1. Mask the AMOUNT column on the right side (Mula 62% sa width hanggang sa tuo)
         amount_column_box = (int(width * 0.62), int(height * 0.15), width, height)
         draw.rectangle(amount_column_box, fill=(8, 12, 20))
         
-        # 2. Mask the TOTAL section at the bottom center (Mula 40% sa width sa ubos)
+        # 2. Mask the TOTAL section at the bottom center
         total_bottom_box = (int(width * 0.35), int(height * 0.45), width, int(height * 0.75))
         draw.rectangle(total_bottom_box, fill=(8, 12, 20))
         
