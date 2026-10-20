@@ -19,33 +19,31 @@ st.set_page_config(
 # ---------------------------------------------------------
 PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
 APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
-APPSHEET_TABLE_NAME = "TEV"  # Exact Table Name gikan sa AppSheet Data Tab!
+APPSHEET_TABLE_NAME = "TEV"
 
-# Google Drive Direct Folder Base Links
-TEV_FILES_FOLDER_ID = "1gid7M0TB_CDWE0svVEw5z09W46v_0k8v"
-TEV_IMAGES_FOLDER_ID = "1YyRCgSik594D234grSjYVX5QwWXRCPPM"
-
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=20)
 def load_tev_data():
     try:
         df = pd.read_csv(PUBLISHED_CSV_URL)
         df.columns = [str(col).strip() for col in df.columns]
+        # REVERSE SORT: In-una ang pinakalatest nga entry sa listahan!
+        df = df.iloc[::-1].reset_index(drop=True)
         return df
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
-# Smart Image / Document URL Parser gamit ang Saktong AppSheet Table Name & Drive Fallback
+# Smart Image / Document URL Parser gamit ang AppSheet ug Drive Direct Link
 def format_appsheet_file_url(val):
-    if pd.isna(val) or not str(val).strip():
+    if pd.isna(val) or not str(val).strip() or str(val).lower() == 'nan':
         return None, None
     val_str = str(val).strip()
     
-    # 1. Direct Web Link (http/https)
+    # Direct Web Link
     if val_str.startswith("http://") or val_str.startswith("https://"):
         return val_str, val_str
 
-    # 2. Google Drive direct file ID match
+    # Google Drive ID match
     drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)
     if drive_match:
         file_id = drive_match.group(1)
@@ -53,13 +51,18 @@ def format_appsheet_file_url(val):
         view_url = f"https://drive.google.com/file/d/{file_id}/view"
         return embed_url, view_url
 
-    # 3. AppSheet Official gettablefileurl with AppName, TableName, ug FileName
+    # AppSheet URL Construct
     encoded_table = APPSHEET_TABLE_NAME.replace(" ", "%20")
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
-    
     appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
     
     return appsheet_url, appsheet_url
+
+# Helper function para tangtangon ang nan nga text
+def clean_val(val, default="---"):
+    if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
+        return default
+    return str(val).strip()
 
 df_tev = load_tev_data()
 
@@ -162,7 +165,7 @@ program_col = next((c for c in df_tev.columns if 'program' in c.lower() or 'offi
 selected_program = "All Programs"
 
 if not df_tev.empty and program_col:
-    prog_list = ["All Programs"] + sorted([str(p) for p in df_tev[program_col].dropna().unique() if str(p).strip() != ""])
+    prog_list = ["All Programs"] + sorted([str(p) for p in df_tev[program_col].dropna().unique() if str(p).strip() != "" and str(p).lower() != 'nan'])
     selected_program = st.sidebar.selectbox("Select Program / Office:", prog_list)
 
 st.sidebar.markdown("---")
@@ -183,7 +186,7 @@ st.sidebar.markdown(
 st.markdown("""
     <div class="header-card">
         <div class="header-title">✈️ PDBBM TEV Executive Tracker</div>
-        <div class="header-sub">Live Executive Dashboard • AppSheet Table Connected</div>
+        <div class="header-sub">Live Executive Dashboard • AppSheet Connected (Latest Records First)</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -193,51 +196,57 @@ if not df_tev.empty:
     else:
         df_filtered = df_tev.copy()
 
-    # Smart Auto-Detect Columns
+    # Column mappings
     drn_col = df_tev.columns[0]
     
-    # Claimant/Et.Al Column priority detect
     name_col = None
     for c in df_tev.columns:
-        if df_tev[c].astype(str).str.contains('et.al|et al|Dharyl|Claimant', case=False, na=False).any():
+        if df_tev[c].astype(str).str.contains('et.al|et al|Claimant|Findings', case=False, na=False).any():
             name_col = c
             break
     if not name_col:
         name_col = df_tev.columns[3] if len(df_tev.columns) > 3 else df_tev.columns[1]
 
-    amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'tev' in c.lower() or 'total' in c.lower()), None)
+    amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'cost' in c.lower() or 'total' in c.lower()), None)
     overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
 
     if amt_col:
         df_filtered[amt_col] = pd.to_numeric(df_filtered[amt_col].astype(str).str.replace(',', '').str.replace('₱', ''), errors='coerce').fillna(0)
 
-    # Top Metrics
+    # Useful Metrics (walay zero display)
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-label">Total Vouchers</div>
+                <div class="metric-label">Total TEV Records</div>
                 <div class="metric-value">{len(df_filtered):,}</div>
             </div>
         """, unsafe_allow_html=True)
     with m2:
         tot_val = df_filtered[amt_col].sum() if amt_col else 0
+        if tot_val > 0:
+            val_display = f"₱{tot_val:,.2f}"
+            lbl_display = "Total Amount Claimed"
+        else:
+            val_display = f"{df_filtered[program_col].nunique() if program_col else len(df_filtered):,}"
+            lbl_display = "Active Program Units"
+            
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-label">Total Amount</div>
-                <div class="metric-value">₱{tot_val:,.2f}</div>
+                <div class="metric-label">{lbl_display}</div>
+                <div class="metric-value">{val_display}</div>
             </div>
         """, unsafe_allow_html=True)
     with m3:
-        pend_cnt = len(df_filtered[df_filtered[overall_status_col].astype(str).str.contains('Pending|Ongoing|Process', case=False, na=False)]) if overall_status_col else 0
+        pend_cnt = len(df_filtered[df_filtered[overall_status_col].astype(str).str.contains('Pending|Ongoing|Process|Logged', case=False, na=False)]) if overall_status_col else len(df_filtered)
         st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-label">In Progress</div>
+                <div class="metric-label">In Progress / Logged</div>
                 <div class="metric-value" style="color:#FFD166;">{pend_cnt:,}</div>
             </div>
         """, unsafe_allow_html=True)
     with m4:
-        app_cnt = len(df_filtered[df_filtered[overall_status_col].astype(str).str.contains('Approved|Completed|Paid|Released', case=False, na=False)]) if overall_status_col else 0
+        app_cnt = len(df_filtered[df_filtered[overall_status_col].astype(str).str.contains('Approved|Completed|Paid|Released|DONE', case=False, na=False)]) if overall_status_col else 0
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">Completed / Paid</div>
@@ -258,18 +267,18 @@ if not df_tev.empty:
 
     st.markdown("---")
 
-    # Interactive Records Card
-    st.subheader(f"📋 TEV Claim Records ({len(df_searched)})")
+    # Interactive Records Card (Latest First)
+    st.subheader(f"📋 TEV Claim Records ({len(df_searched)}) — Latest Entries First")
 
     if df_searched.empty:
         st.info("Walay nakita nga TEV record base sa imong gi-search.")
     else:
         for idx, row in df_searched.iterrows():
-            drn_val = str(row.get(drn_col, 'N/A'))
-            name_val = str(row.get(name_col, 'N/A'))
-            status_val = str(row.get(overall_status_col, 'Logged')) if overall_status_col else 'Logged'
+            drn_val = clean_val(row.get(drn_col), "N/A")
+            name_val = clean_val(row.get(name_col), "N/A")
+            status_val = clean_val(row.get(overall_status_col), "Logged")
 
-            # Header Format
+            # Clean Title Header
             expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}  |  Status: {status_val}"
 
             with st.expander(expander_title, expanded=False):
@@ -279,7 +288,8 @@ if not df_tev.empty:
                     st.markdown("##### 📌 Basic Information")
                     for c in df_tev.columns[:6]:
                         col_label = c if not c.startswith('Unnamed:') else f"Field {c.split(':')[1] if ':' in c else c.split(' ')[1]}"
-                        st.write(f"**{col_label}:** {row[c]}")
+                        val_cleaned = clean_val(row[c])
+                        st.write(f"**{col_label}:** {val_cleaned}")
 
                 with col_status:
                     st.markdown("##### 🏛️ Department Tracking & Remarks")
@@ -289,22 +299,27 @@ if not df_tev.empty:
                     fin_col = next((c for c in df_tev.columns if 'finance' in c.lower()), None)
                     rem_col = next((c for c in df_tev.columns if 'remark' in c.lower() or 'note' in c.lower()), None)
 
-                    st.markdown(f"• **Budget:** `{row.get(budget_col, 'Processed') if budget_col else 'In Process'}`")
-                    st.markdown(f"• **Accounting:** `{row.get(acct_col, 'Pending Review') if acct_col else 'In Process'}`")
-                    st.markdown(f"• **Cashier:** `{row.get(cash_col, 'Pending') if cash_col else 'For Disbursement'}`")
-                    st.markdown(f"• **Finance:** `{row.get(fin_col, 'Ongoing') if fin_col else 'Pending Approval'}`")
+                    b_val = clean_val(row.get(budget_col), "Pending / Process")
+                    a_val = clean_val(row.get(acct_col), "Pending / Process")
+                    c_val = clean_val(row.get(cash_col), "Pending / Process")
+                    f_val = clean_val(row.get(fin_col), "Pending / Process")
+
+                    st.markdown(f"• **Budget:** `{b_val}`")
+                    st.markdown(f"• **Accounting:** `{a_val}`")
+                    st.markdown(f"• **Cashier:** `{c_val}`")
+                    st.markdown(f"• **Finance:** `{f_val}`")
                     
-                    if rem_col and pd.notna(row.get(rem_col)):
+                    if rem_col and pd.notna(row.get(rem_col)) and str(row.get(rem_col)).lower() != 'nan':
                         st.info(f"💬 **Remarks:** {row.get(rem_col)}")
 
                 with col_attach:
                     st.markdown("##### 📎 Attached Document / Et. Al List")
                     
-                    # Scan row to find image/document file paths
+                    # Scan row to find valid image/document file path
                     found_file = None
                     for cell in row.values:
                         cell_str = str(cell).strip()
-                        if any(ext in cell_str.lower() for ext in ['.jpg', '.jpeg', '.png', '.pdf', 'tev_images', 'documents_files', 'tev_files', 'drive.google']):
+                        if cell_str.lower() != 'nan' and any(ext in cell_str.lower() for ext in ['.jpg', '.jpeg', '.png', '.pdf', 'tev_images', 'documents_files', 'tev_files', 'drive.google']):
                             found_file = cell_str
                             break
                     
@@ -331,10 +346,11 @@ if not df_tev.empty:
                 st.plotly_chart(fig1, use_container_width=True)
 
         with c2:
-            st.subheader("💰 Top Claims Amount")
-            if amt_col and name_col:
-                top_10 = df_filtered.groupby(name_col)[amt_col].sum().reset_index().sort_values(by=amt_col, ascending=False).head(8)
-                fig2 = px.bar(top_10, x=name_col, y=amt_col, text_auto=',.2f', color_discrete_sequence=['#6FFFE9'])
+            st.subheader("🏢 Claims Distribution by Program")
+            if program_col:
+                prog_counts = df_filtered[program_col].value_counts().reset_index().head(8)
+                prog_counts.columns = [program_col, 'Count']
+                fig2 = px.bar(prog_counts, x=program_col, y='Count', text_auto=True, color_discrete_sequence=['#6FFFE9'])
                 fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF")
                 st.plotly_chart(fig2, use_container_width=True)
 
