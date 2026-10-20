@@ -1,6 +1,9 @@
 import os
 import datetime
 import re
+import io
+import requests
+from PIL import Image
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -73,6 +76,27 @@ def format_appsheet_file_url(val):
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
     return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
+# 🎯 Clean Physical Crop Function (I-crop ra ang gi-red box nga bahin: Header + Names + Inclusive Dates)
+@st.cache_data(ttl=3600)
+def get_clean_boxed_crop(img_url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        resp = requests.get(img_url, headers=headers, timeout=8)
+        if resp.status_code != 200:
+            return None
+        
+        img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+        width, height = img.size
+        
+        # Precise Bounding Box para makuha ra ang Red Box Area (Walang Amount & Slashes)
+        # Left: 0, Top: 0, Right: 67% width, Bottom: 88% height
+        crop_area = (0, 0, int(width * 0.67), int(height * 0.88))
+        cropped_img = img.crop(crop_area)
+        
+        return cropped_img
+    except Exception:
+        return None
+
 def clean_val(val, default="---"):
     if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
         return default
@@ -81,7 +105,7 @@ def clean_val(val, default="---"):
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + MASKING OVERLAY
+# 3. HIGH-CONTRAST NEON CYBERPUNK THEME
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -91,13 +115,11 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* Deep Obsidian Background */
     .stApp { 
         background-color: #080C14 !important; 
         color: #FFFFFF !important;
     }
     
-    /* Neon Header Card */
     .header-card {
         background: linear-gradient(135deg, #0F172A 0%, #1E1035 100%);
         border: 2px solid #00F5FF;
@@ -109,7 +131,6 @@ st.markdown("""
     .header-title { font-size: 30px; font-weight: 900; color: #00F5FF; text-shadow: 0 0 10px rgba(0, 245, 255, 0.6); }
     .header-sub { font-size: 15px; color: #E2E8F0; font-weight: 500; }
 
-    /* 🌟 NEON METRIC CARDS */
     .metric-card {
         background: #0F172A;
         border: 2px solid #1E293B;
@@ -118,15 +139,9 @@ st.markdown("""
         text-align: center;
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
-    .metric-value { 
-        font-size: 28px; 
-        font-weight: 900; 
-        color: #00F5FF; 
-        margin-top: 5px;
-    }
+    .metric-value { font-size: 28px; font-weight: 900; color: #00F5FF; margin-top: 5px; }
     .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; }
 
-    /* 🌟 NEON MAGENTA BUTTONS */
     div.stButton > button, div.stDownloadButton > button {
         background: linear-gradient(135deg, #FF007F 0%, #7928CA 100%) !important;
         color: #FFFFFF !important;
@@ -135,14 +150,12 @@ st.markdown("""
         border: 1px solid #FF007F !important;
     }
 
-    /* 🌟 EXPANDER CARD */
     .stExpander {
         background-color: #0F172A !important;
         border: 1px solid #1E293B !important;
         border-radius: 12px !important;
     }
 
-    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #080C14 !important;
         border-right: 1px solid #1E293B;
@@ -316,11 +329,11 @@ if not df_tev.empty:
                     img_url = format_appsheet_file_url(found_file)
 
                     if img_url and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                        try:
-                            # Direct Native Streamlit Image Display (Zero Crash Risk)
+                        clean_crop = get_clean_boxed_crop(img_url)
+                        if clean_crop:
+                            st.image(clean_crop, caption="Et. Al List Verification (Names & Details Only)", use_container_width=True)
+                        else:
                             st.image(img_url, caption="Et. Al List Verification", use_container_width=True)
-                        except Exception:
-                            st.caption("ℹ️ Unable to render image preview directly.")
                     else:
                         st.caption("ℹ️ Walang naka-attach na image preview sa entry na ito.")
 
