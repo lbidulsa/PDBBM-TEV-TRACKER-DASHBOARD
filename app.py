@@ -28,16 +28,14 @@ def load_tev_data():
         df = pd.read_csv(PUBLISHED_CSV_URL)
         df.columns = [str(col).strip() for col in df.columns]
         
-        # 1. Alisin ang mga walang nilalaman na empty rows
+        # Alisin ang mga empty rows
         df = df.dropna(how='all')
         
-        # Detect DRN at Name Column
+        # Detect DRN Column
         drn_c = df.columns[0]
-        
-        # Alisin ang mga rows na walang DRN
         df = df[df[drn_c].notna() & (df[drn_c].astype(str).str.strip() != '') & (df[drn_c].astype(str).str.strip().str.upper() != 'NAN')]
         
-        # 2. Smart Date Parsing para mauna ang pinakabagong date (October)
+        # Smart Date Sorting (Latest October first)
         date_c = None
         for c in df.columns:
             if any(k in c.lower() for k in ['date', 'time', 'received', 'created']):
@@ -57,27 +55,23 @@ def load_tev_data():
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
-# Smart URL Parser para sa AppSheet & Drive Link
+# Smart URL Parser para sa AppSheet File URL
 def format_appsheet_file_url(val):
     if pd.isna(val) or not str(val).strip() or str(val).lower() == 'nan':
-        return None, None
+        return None
     val_str = str(val).strip()
     
     if val_str.startswith("http://") or val_str.startswith("https://"):
-        return val_str, val_str
+        return val_str
 
     drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)
     if drive_match:
         file_id = drive_match.group(1)
-        embed_url = f"https://drive.google.com/uc?export=view&id={file_id}"
-        view_url = f"https://drive.google.com/file/d/{file_id}/view"
-        return embed_url, view_url
+        return f"https://drive.google.com/uc?export=view&id={file_id}"
 
     encoded_table = APPSHEET_TABLE_NAME.replace(" ", "%20")
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
-    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
-    
-    return appsheet_url, appsheet_url
+    return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
 def clean_val(val, default="---"):
     if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
@@ -87,7 +81,7 @@ def clean_val(val, default="---"):
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + SIGA-SIGA CSS
+# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + MASKING OVERLAY
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -115,7 +109,7 @@ st.markdown("""
     .header-title { font-size: 30px; font-weight: 900; color: #00F5FF; text-shadow: 0 0 10px rgba(0, 245, 255, 0.6); }
     .header-sub { font-size: 15px; color: #E2E8F0; font-weight: 500; }
 
-    /* 🌟 CATCHY NEON METRIC CARDS WITH GLOW */
+    /* 🌟 NEON METRIC CARDS */
     .metric-card {
         background: #0F172A;
         border: 2px solid #1E293B;
@@ -123,21 +117,14 @@ st.markdown("""
         padding: 18px;
         text-align: center;
         box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-    }
-    .metric-card:hover {
-        transform: translateY(-5px) scale(1.02) !important;
-        border-color: #39FF14 !important;
-        box-shadow: 0 0 25px rgba(57, 255, 20, 0.6), 0 0 35px rgba(0, 245, 255, 0.4) !important;
     }
     .metric-value { 
         font-size: 28px; 
         font-weight: 900; 
         color: #00F5FF; 
         margin-top: 5px;
-        text-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
     }
-    .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; }
+    .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; }
 
     /* 🌟 NEON MAGENTA BUTTONS */
     div.stButton > button, div.stDownloadButton > button {
@@ -146,61 +133,13 @@ st.markdown("""
         font-weight: 800 !important;
         border-radius: 10px !important;
         border: 1px solid #FF007F !important;
-        padding: 10px 22px !important;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-        box-shadow: 0 0 15px rgba(255, 0, 127, 0.4) !important;
-    }
-    div.stButton > button:hover, div.stDownloadButton > button:hover {
-        background: linear-gradient(135deg, #00F5FF 0%, #0070F3 100%) !important;
-        color: #000000 !important;
-        border-color: #00F5FF !important;
-        box-shadow: 0 0 25px rgba(0, 245, 255, 0.9), 0 0 35px rgba(57, 255, 20, 0.6) !important;
-        transform: translateY(-3px) scale(1.03) !important;
     }
 
-    /* 🌟 NEON EXPANDER CARD */
+    /* 🌟 EXPANDER CARD */
     .stExpander {
         background-color: #0F172A !important;
         border: 1px solid #1E293B !important;
         border-radius: 12px !important;
-        transition: all 0.3s ease !important;
-    }
-    .stExpander:hover {
-        border-color: #FF007F !important;
-        box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
-    }
-    
-    /* 🛡️ IMAGE MASK SHIELD CONTAINER */
-    .img-mask-container {
-        position: relative;
-        display: inline-block;
-        width: 100%;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .img-mask-container img {
-        width: 100%;
-        display: block;
-    }
-    /* Blackout box for Amount Column (Right side) */
-    .mask-amount-col {
-        position: absolute;
-        top: 15%;
-        right: 0;
-        width: 38%;
-        height: 85%;
-        background-color: #080C14;
-        z-index: 10;
-    }
-    /* Blackout box for Total / Slashes (Bottom) */
-    .mask-total-bottom {
-        position: absolute;
-        bottom: 15%;
-        left: 30%;
-        width: 70%;
-        height: 35%;
-        background-color: #080C14;
-        z-index: 11;
     }
 
     /* Sidebar Styling */
@@ -274,7 +213,6 @@ if not df_tev.empty:
     drn_col = df_tev.columns[0]
     name_col = df_tev.columns[3] if len(df_tev.columns) > 3 else df_tev.columns[1]
 
-    amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'cost' in c.lower() or 'total' in c.lower()), None)
     overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
 
     attach_count = sum(1 for _, r in df_filtered.iterrows() if any(ext in str(v).lower() for v in r.values for ext in ['.jpg', '.png', '.pdf', 'tev_images', 'documents_files']))
@@ -331,7 +269,6 @@ if not df_tev.empty:
         for idx, row in df_searched.iterrows():
             drn_val = clean_val(row.get(drn_col), "N/A")
             name_val = clean_val(row.get(name_col), "N/A")
-            status_val = clean_val(row.get(overall_status_col), "Logged")
 
             expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}"
 
@@ -376,17 +313,14 @@ if not df_tev.empty:
                             found_file = cell_str
                             break
                     
-                    embed_link, _ = format_appsheet_file_url(found_file)
+                    img_url = format_appsheet_file_url(found_file)
 
-                    if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                        st.markdown(f"""
-                            <div class="img-mask-container">
-                                <img src="{embed_link}" alt="Et. Al Attachment">
-                                <div class="mask-amount-col"></div>
-                                <div class="mask-total-bottom"></div>
-                            </div>
-                            <p style="font-size:0.8em; color:#00F5FF; margin-top:4px;">🔒 <i>Amount & Total Protected (Names/Positions Visible)</i></p>
-                        """, unsafe_allow_html=True)
+                    if img_url and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
+                        try:
+                            # Direct Native Streamlit Image Display (Zero Crash Risk)
+                            st.image(img_url, caption="Et. Al List Verification", use_container_width=True)
+                        except Exception:
+                            st.caption("ℹ️ Unable to render image preview directly.")
                     else:
                         st.caption("ℹ️ Walang naka-attach na image preview sa entry na ito.")
 
