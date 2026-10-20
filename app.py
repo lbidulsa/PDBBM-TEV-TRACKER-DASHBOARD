@@ -3,7 +3,7 @@ import datetime
 import re
 import io
 import requests
-from PIL import Image, ImageFilter, ImageDraw
+from PIL import Image
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -82,34 +82,25 @@ def format_appsheet_file_url(val):
     
     return appsheet_url, appsheet_url
 
-# Helper Function para i-super blur / i-mask ang AMOUNT section ng attachment image
+# Helper Function para i-crop ang TAAS nga bahin ra sa image (NAMES/ET.AL ONLY)
 @st.cache_data(ttl=3600)
-def process_and_mask_amount_image(img_url):
+def process_and_crop_names_only(img_url):
     try:
         response = requests.get(img_url, timeout=10)
         if response.status_code != 200:
-            return img_url
+            return None
             
         img = Image.open(io.BytesIO(response.content)).convert("RGB")
         width, height = img.size
         
-        # Target Region: AMOUNT column & Total Slashes (Gitna papuntang Kanan at Ibaba)
-        # Bounding Box Coordinates: (left, top, right, bottom)
-        box = (int(width * 0.42), int(height * 0.25), int(width * 0.78), int(height * 0.70))
+        # PAMAAGI B: I-crop ra ang TAAS/GITNA nga bahin kung diin naa ang pangalan (Top 0% to 45%)
+        # Sigurado nga putol ang ubos diin nahimutang ang Amount, Total, ug Slashes
+        crop_box = (0, 0, width, int(height * 0.45))
+        cropped_img = img.crop(crop_box)
         
-        # Heavy Blur Processing
-        cropped_part = img.crop(box)
-        blurred_part = cropped_part.filter(ImageFilter.GaussianBlur(radius=35))
-        img.paste(blurred_part, box)
-        
-        # Maglagay ng semi-transparent dark overlay para siguradong hindi na mabasa
-        draw = ImageDraw.Draw(img, "RGBA")
-        draw.rectangle(box, fill=(15, 23, 42, 180))
-        
-        return img
+        return cropped_img
     except Exception:
-        # Fallback kung sakaling mag-error sa pag-fetch ng raw image
-        return img_url
+        return None
 
 def clean_val(val, default="---"):
     if pd.isna(val) or str(val).strip().lower() == 'nan' or not str(val).strip():
@@ -366,7 +357,7 @@ if not df_tev.empty:
                         st.info(f"💬 **Remarks:** {row.get(rem_col)}")
 
                 with col_attach:
-                    st.markdown("##### 📎 Attached Document / Et. Al List")
+                    st.markdown("##### 📎 Et. Al Attachment Verification")
                     
                     found_file = None
                     for cell in row.values:
@@ -375,16 +366,17 @@ if not df_tev.empty:
                             found_file = cell_str
                             break
                     
-                    embed_link, view_link = format_appsheet_file_url(found_file)
+                    embed_link, _ = format_appsheet_file_url(found_file)
 
-                    if embed_link or view_link:
-                        st.markdown(f"📄 [**Open / View Attached File / Image**]({view_link})")
-                        if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
-                            # Processing Image Mask
-                            masked_img = process_and_mask_amount_image(embed_link)
-                            st.image(masked_img, caption="Et. Al List Preview (Amount Protected)", use_container_width=True)
+                    if embed_link and any(ext in str(found_file).lower() for ext in ['.jpg', '.jpeg', '.png']):
+                        # Auto-crop Top Portion Only (Names/Et.Al)
+                        cropped_img = process_and_crop_names_only(embed_link)
+                        if cropped_img:
+                            st.image(cropped_img, caption="Et. Al Verification Preview (Names Only)", use_container_width=True)
+                        else:
+                            st.caption("ℹ️ Unable to load image preview.")
                     else:
-                        st.caption("ℹ️ Walang naka-attach na document o image sa entry na ito.")
+                        st.caption("ℹ️ Walang naka-attach na image preview sa entry na ito.")
 
     st.markdown("---")
 
