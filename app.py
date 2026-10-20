@@ -5,7 +5,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# 1. PAGE CONFIGURATION (DAPAT UNANG-UNA!)
+# 1. PAGE CONFIGURATION
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="PDBBM TEV Executive Tracker",
@@ -15,16 +15,14 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# 2. GOOGLE SHEETS LIVE CSV LINK & APPSHEET CONFIG
+# 2. GOOGLE SHEETS LIVE CSV LOAD FUNCTION (DIRECT URL)
 # ---------------------------------------------------------
-PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"[cite: 5]
-APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
-
 @st.cache_data(ttl=30)
 def load_tev_data():
+    csv_link = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
     try:
-        df = pd.read_csv(PUBLISHED_CSV_URL)[cite: 5]
-        df.columns = [str(col).strip() for col in df.columns][cite: 5]
+        df = pd.read_csv(csv_link)
+        df.columns = [str(col).strip() for col in df.columns]
         return df
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
@@ -32,6 +30,7 @@ def load_tev_data():
 
 # Smart Image / Document URL Parser para sa AppSheet & Google Drive Files
 def format_appsheet_file_url(val):
+    app_name = "PDBBM-RPMODocumentTracker-270708318"
     if pd.isna(val) or not str(val).strip():
         return None, None
     val_str = str(val).strip()
@@ -50,10 +49,10 @@ def format_appsheet_file_url(val):
         
     # 3. AppSheet Template GetTableFileUrl relative path conversion
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
-    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&fileName={encoded_path}"
+    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={app_name}&fileName={encoded_path}"
     return appsheet_url, appsheet_url
 
-# Load Data
+# Fetch Live Data
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
@@ -117,7 +116,7 @@ st.markdown("""
         border-radius: 10px !important;
     }
     
-    /* Text Visibility Fix */
+    /* Global Text Color Fix */
     label, p, span, h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF !important;
     }
@@ -159,7 +158,7 @@ st.sidebar.markdown(
 )
 
 # ---------------------------------------------------------
-# 5. MAIN HEADER
+# 5. MAIN HEADER & DASHBOARD BODY
 # ---------------------------------------------------------
 st.markdown("""
     <div class="header-card">
@@ -174,7 +173,7 @@ if not df_tev.empty:
     else:
         df_filtered = df_tev.copy()
 
-    # Column Auto-Detect
+    # Column Mappings
     drn_col = next((c for c in df_tev.columns if 'drn' in c.lower() or 'voucher' in c.lower() or 'id' in c.lower()), df_tev.columns[0])
     name_col = next((c for c in df_tev.columns if 'et.al' in c.lower() or 'etal' in c.lower() or 'name' in c.lower() or 'payee' in c.lower() or 'claimant' in c.lower()), df_tev.columns[1] if len(df_tev.columns) > 1 else df_tev.columns[0])
     amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'tev' in c.lower() or 'total' in c.lower()), None)
