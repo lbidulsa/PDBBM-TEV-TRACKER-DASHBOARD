@@ -15,115 +15,118 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# GOOGLE SHEETS LIVE CSV LINK & DATA LOAD FUNCTION
+# GOOGLE SHEETS LIVE CSV LINK & DATA LOAD
 # ---------------------------------------------------------
-PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
+PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"[cite: 5]
+
+# Exact App Name gikan sa imong AppSheet link
+APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
 
 @st.cache_data(ttl=30)
 def load_tev_data():
     try:
-        df = pd.read_csv(PUBLISHED_CSV_URL)
-        df.columns = [str(col).strip() for col in df.columns]
+        df = pd.read_csv(PUBLISHED_CSV_URL)[cite: 5]
+        df.columns = [str(col).strip() for col in df.columns][cite: 5]
         return df
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
-# Helper function to convert Google Drive / AppSheet image links to direct image URLs
-def format_drive_image_url(url_str):
-    if pd.isna(url_str) or not isinstance(url_str, str):
-        return None
-    url_str = url_str.strip()
-    match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', url_str)
-    if match:
-        file_id = match.group(1)
-        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w800"
-    if url_str.startswith("http"):
-        return url_str
-    return None
+# Smart Image / Document URL Parser para sa AppSheet & Google Drive Files
+def format_appsheet_file_url(val):
+    if pd.isna(val) or not str(val).strip():
+        return None, None
+    val_str = str(val).strip()
+    
+    # 1. Google Drive direct file ID match
+    drive_match = re.search(r'(?:id=|\/d\/)([a-zA-Z0-9_-]+)', val_str)
+    if drive_match:
+        file_id = drive_match.group(1)
+        embed_url = f"https://drive.google.com/uc?export=view&id={file_id}"
+        view_url = f"https://drive.google.com/file/d/{file_id}/view"
+        return embed_url, view_url
+    
+    # 2. Direct Web URL (http/https)
+    if val_str.startswith("http://") or val_str.startswith("https://"):
+        return val_str, val_str
+        
+    # 3. AppSheet Template GetTableFileUrl relative path conversion
+    encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
+    appsheet_url = f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&fileName={encoded_path}"
+    return appsheet_url, appsheet_url
 
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# MODERN NEW LOOK CUSTOM CSS & GLOW EFFECTS
+# HIGH-CONTRAST DARK THEME CUSTOM CSS (KLARO ANG TEXT)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
     
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
     
     .stApp { 
-        background: #0F172A; 
-        color: #F8FAFC;
+        background-color: #0B132B !important; 
+        color: #FFFFFF !important;
     }
     
     /* Header Card */
     .header-card {
-        background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-        border: 1px solid #334155;
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        background: #1C2541;
+        border: 2px solid #3A506B;
+        border-radius: 12px;
+        padding: 20px 25px;
+        margin-bottom: 20px;
     }
-    .header-title { font-size: 28px; font-weight: 800; color: #38BDF8; margin-bottom: 5px; }
-    .header-sub { font-size: 14px; color: #94A3B8; }
+    .header-title { font-size: 28px; font-weight: 900; color: #6FFFE9; }
+    .header-sub { font-size: 15px; color: #E0E6ED; font-weight: 500; }
 
-    /* Glowing Metric Cards */
+    /* High Contrast Metric Cards */
     .metric-card {
-        background: #1E293B;
-        border: 1px solid #334155;
-        border-radius: 14px;
-        padding: 18px;
+        background: #1C2541;
+        border: 2px solid #3A506B;
+        border-radius: 12px;
+        padding: 16px;
         text-align: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .metric-card:hover {
-        transform: translateY(-5px);
-        border-color: #38BDF8;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
-    }
-    .metric-value { font-size: 26px; font-weight: 800; color: #F8FAFC; margin: 8px 0; }
-    .metric-label { font-size: 12px; font-weight: 600; color: #94A3B8; text-transform: uppercase; }
+    .metric-value { font-size: 26px; font-weight: 900; color: #6FFFE9; margin-top: 5px; }
+    .metric-label { font-size: 13px; font-weight: 700; color: #FFFFFF; text-transform: uppercase; }
 
-    /* Buttons Style */
+    /* Buttons */
     div.stButton > button, div.stDownloadButton > button {
-        background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-        border-radius: 10px !important;
+        background-color: #5BC0BE !important;
+        color: #0B132B !important;
+        font-weight: 800 !important;
+        border-radius: 8px !important;
         border: none !important;
-        padding: 10px 22px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+        padding: 10px 20px !important;
     }
     div.stButton > button:hover, div.stDownloadButton > button:hover {
-        transform: translateY(-2px) scale(1.02) !important;
-        box-shadow: 0 0 20px rgba(56, 189, 248, 0.6) !important;
+        background-color: #6FFFE9 !important;
+        color: #000000 !important;
+        box-shadow: 0 0 15px rgba(111, 255, 233, 0.6) !important;
     }
 
-    /* Expander Card */
+    /* Expander Text Styling */
     .stExpander {
-        background: #1E293B !important;
-        border: 1px solid #334155 !important;
-        border-radius: 12px !important;
-        margin-bottom: 12px !important;
+        background-color: #1C2541 !important;
+        border: 1px solid #3A506B !important;
+        border-radius: 10px !important;
     }
     
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #0F172A !important;
-        border-right: 1px solid #334155;
+    /* Text Visibility Fix */
+    label, p, span, h1, h2, h3, h4, h5, h6 {
+        color: #FFFFFF !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SIDEBAR NAVIGATION & FILTERS
+# SIDEBAR NAVIGATION
 # ---------------------------------------------------------
 st.sidebar.markdown("### ✈️ PDBBM TEV Portal")
 st.sidebar.caption("AppSheet Live Synchronization")
@@ -147,9 +150,9 @@ if not df_tev.empty and program_col:
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     """
-    <div style="text-align: center; font-size: 0.8em; color: #94A3B8;">
+    <div style="text-align: center; font-size: 0.85em; color: #E0E6ED;">
         💻 <b>System Architect</b><br>
-        Developed by <br><b style="color:#38BDF8;">LOUIE B. IDULSA - PDBBM ITO I</b><br>
+        Developed by <br><b style="color:#6FFFE9;">LOUIE B. IDULSA - PDBBM ITO I</b><br>
         <i>DSWD FO X • 2026</i>
     </div>
     """,
@@ -157,12 +160,12 @@ st.sidebar.markdown(
 )
 
 # ---------------------------------------------------------
-# HEADER SECTION
+# MAIN HEADER
 # ---------------------------------------------------------
 st.markdown("""
     <div class="header-card">
-        <div class="header-title">✈️ PDBBM TEV Interactive Tracking Portal</div>
-        <div class="header-sub">Real-time status tracking across Budget, Accounting, Cashier & Finance Departments</div>
+        <div class="header-title">✈️ PDBBM TEV Executive Tracker</div>
+        <div class="header-sub">Live Executive Dashboard • AppSheet Connected</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -172,11 +175,12 @@ if not df_tev.empty:
     else:
         df_filtered = df_tev.copy()
 
+    # Column Auto-Detect
     drn_col = next((c for c in df_tev.columns if 'drn' in c.lower() or 'voucher' in c.lower() or 'id' in c.lower()), df_tev.columns[0])
-    name_col = next((c for c in df_tev.columns if 'name' in c.lower() or 'payee' in c.lower() or 'claimant' in c.lower() or 'personnel' in c.lower()), df_tev.columns[1] if len(df_tev.columns) > 1 else df_tev.columns[0])
+    name_col = next((c for c in df_tev.columns if 'et.al' in c.lower() or 'etal' in c.lower() or 'name' in c.lower() or 'payee' in c.lower() or 'claimant' in c.lower()), df_tev.columns[1] if len(df_tev.columns) > 1 else df_tev.columns[0])
     amt_col = next((c for c in df_tev.columns if 'amount' in c.lower() or 'tev' in c.lower() or 'total' in c.lower()), None)
     overall_status_col = next((c for c in df_tev.columns if 'status' in c.lower() or 'state' in c.lower()), None)
-    img_col = next((c for c in df_tev.columns if 'image' in c.lower() or 'attach' in c.lower() or 'photo' in c.lower() or 'et.al' in c.lower() or 'file' in c.lower()), None)
+    img_col = next((c for c in df_tev.columns if 'image' in c.lower() or 'attach' in c.lower() or 'photo' in c.lower() or 'file' in c.lower() or 'picture' in c.lower()), None)
 
     if amt_col:
         df_filtered[amt_col] = pd.to_numeric(df_filtered[amt_col].astype(str).str.replace(',', '').str.replace('₱', ''), errors='coerce').fillna(0)
@@ -203,7 +207,7 @@ if not df_tev.empty:
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">In Progress</div>
-                <div class="metric-value" style="color:#FACC15;">{pend_cnt:,}</div>
+                <div class="metric-value" style="color:#FFD166;">{pend_cnt:,}</div>
             </div>
         """, unsafe_allow_html=True)
     with m4:
@@ -211,14 +215,14 @@ if not df_tev.empty:
         st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-label">Completed / Paid</div>
-                <div class="metric-value" style="color:#4ADE80;">{app_cnt:,}</div>
+                <div class="metric-value" style="color:#06D6A0;">{app_cnt:,}</div>
             </div>
         """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Search Bar
-    search_query = st.text_input("🔍 Quick Search Voucher (Type DRN #, Claimant Name, Station, or Key terms):", "")
+    # Instant Search Bar
+    search_query = st.text_input("🔍 Quick Search (DRN #, Claimant / Et. Al, Station, Status, etc.):", "")
 
     if search_query:
         search_mask = df_filtered.astype(str).apply(lambda row: row.str.contains(search_query, case=False).any(), axis=1)
@@ -228,11 +232,11 @@ if not df_tev.empty:
 
     st.markdown("---")
 
-    # Interactive Cards
+    # Interactive Records Card
     st.subheader(f"📋 TEV Claim Records ({len(df_searched)})")
 
     if df_searched.empty:
-        st.info("No matching TEV voucher records found.")
+        st.info("Walay nakita nga TEV record base sa imong gi-search.")
     else:
         for idx, row in df_searched.iterrows():
             drn_val = str(row.get(drn_col, 'N/A'))
@@ -240,79 +244,76 @@ if not df_tev.empty:
             amt_val = f"₱{float(row.get(amt_col, 0)):,.2f}" if amt_col else "N/A"
             status_val = str(row.get(overall_status_col, 'In Process')) if overall_status_col else 'Logged'
 
-            expander_title = f"📄 DRN: {drn_val} | Claimant: {name_val} | Amount: {amt_val} | Status: {status_val}"
+            # Header format: DRN | Name (Et. Al) | Amount | Status
+            expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}  |  Amount: {amt_val}  |  Status: {status_val}"
 
             with st.expander(expander_title, expanded=False):
                 col_info, col_status, col_attach = st.columns([2, 2, 1.5])
 
                 with col_info:
-                    st.markdown("##### 📌 Voucher Details")
+                    st.markdown("##### 📌 Basic Information")
                     for c in df_tev.columns[:6]:
                         st.write(f"**{c}:** {row[c]}")
 
                 with col_status:
                     st.markdown("##### 🏛️ Department Tracking & Remarks")
-                    
                     budget_col = next((c for c in df_tev.columns if 'budget' in c.lower()), None)
                     acct_col = next((c for c in df_tev.columns if 'account' in c.lower()), None)
                     cash_col = next((c for c in df_tev.columns if 'cash' in c.lower() or 'treasury' in c.lower()), None)
                     fin_col = next((c for c in df_tev.columns if 'finance' in c.lower()), None)
                     rem_col = next((c for c in df_tev.columns if 'remark' in c.lower() or 'note' in c.lower()), None)
 
-                    st.markdown(f"• **Budget Status:** `{row.get(budget_col, 'Updated / In Progress') if budget_col else 'Processed'}`")
-                    st.markdown(f"• **Accounting Status:** `{row.get(acct_col, 'Pending Review') if acct_col else 'In Process'}`")
-                    st.markdown(f"• **Cash / Treasury:** `{row.get(cash_col, 'Pending') if cash_col else 'For Disbursement'}`")
-                    st.markdown(f"• **Finance Final:** `{row.get(fin_col, 'Ongoing') if fin_col else 'Pending Approval'}`")
+                    st.markdown(f"• **Budget:** `{row.get(budget_col, 'Processed') if budget_col else 'In Process'}`")
+                    st.markdown(f"• **Accounting:** `{row.get(acct_col, 'Pending Review') if acct_col else 'In Process'}`")
+                    st.markdown(f"• **Cashier:** `{row.get(cash_col, 'Pending') if cash_col else 'For Disbursement'}`")
+                    st.markdown(f"• **Finance:** `{row.get(fin_col, 'Ongoing') if fin_col else 'Pending Approval'}`")
                     
                     if rem_col and pd.notna(row.get(rem_col)):
-                        st.info(f"💬 **Department Remarks:** {row.get(rem_col)}")
+                        st.info(f"💬 **Remarks:** {row.get(rem_col)}")
 
                 with col_attach:
                     st.markdown("##### 📎 Attached Document / Et. Al List")
-                    if img_col and pd.notna(row.get(img_col)):
-                        raw_img_link = str(row.get(img_col))
-                        formatted_img = format_drive_image_url(raw_img_link)
-                        
-                        if formatted_img:
-                            st.image(formatted_img, caption="Et. Al List / Attachment", use_container_width=True)
-                            st.markdown(f"[🔗 Open Attachment Link]({raw_img_link})")
-                        else:
-                            st.caption("No valid image link found.")
+                    img_val = row.get(img_col) if img_col else None
+                    embed_link, view_link = format_appsheet_file_url(img_val)
+
+                    if embed_link or view_link:
+                        st.markdown(f"📄 [**Open / View Attached File**]({view_link})")
+                        if embed_link and any(ext in str(img_val).lower() for ext in ['.jpg', '.jpeg', '.png']):
+                            st.image(embed_link, caption="Et. Al Attachment Preview", use_container_width=True)
                     else:
-                        st.caption("No image/document attached in AppSheet entry.")
+                        st.caption("ℹ️ Walay naka-attach nga document o image sa kining nga entry.")
 
     st.markdown("---")
 
-    tab1, tab2 = st.tabs(["📊 Analytics & Charts", "📥 Full Table Data Export"])
+    # Analytics & Masterlist Tabs
+    tab1, tab2 = st.tabs(["📊 Analytics & Charts", "📥 Raw Masterlist Data"])
 
     with tab1:
         c1, c2 = st.columns(2)
         with c1:
             st.subheader("📊 Status Breakdown")
             if overall_status_col:
-                fig1 = px.pie(df_filtered, names=overall_status_col, hole=0.4, color_discrete_sequence=px.colors.qualitative.Dark24)
-                fig1.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#F8FAFC")
+                fig1 = px.pie(df_filtered, names=overall_status_col, hole=0.4, color_discrete_sequence=px.colors.qualitative.Set3)
+                fig1.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF")
                 st.plotly_chart(fig1, use_container_width=True)
-            else:
-                st.info("No Status column found for analytics.")
 
         with c2:
             st.subheader("💰 Top Claims Amount")
             if amt_col and name_col:
                 top_10 = df_filtered.groupby(name_col)[amt_col].sum().reset_index().sort_values(by=amt_col, ascending=False).head(8)
-                fig2 = px.bar(top_10, x=name_col, y=amt_col, text_auto=',.2f', color_discrete_sequence=['#38BDF8'])
-                fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#F8FAFC")
+                fig2 = px.bar(top_10, x=name_col, y=amt_col, text_auto=',.2f', color_discrete_sequence=['#6FFFE9'])
+                fig2.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#FFFFFF")
                 st.plotly_chart(fig2, use_container_width=True)
 
     with tab2:
-        st.subheader("📋 Raw Masterlist Table")
+        st.subheader("📋 Complete Table Data")
         st.dataframe(df_filtered, use_container_width=True)
         
         csv_data = df_filtered.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📄 Download Filtered Report (.CSV)",
+            label="📄 Export CSV Report",
             data=csv_data,
-            file_name=f"TEV_Executive_Report_{datetime.date.today().strftime('%Y%m%d')}.csv",
+            file_name=f"TEV_Report_{datetime.date.today().strftime('%Y%m%d')}.csv",
             mime="text/csv"
         )
 
@@ -322,8 +323,8 @@ else:
 st.markdown("---")
 st.markdown(
     """
-    <div style="text-align: center; font-size: 0.85em; color: #64748B; padding-bottom: 20px;">
-        ✈️ <b>PDBBM TEV Executive Tracker</b> | Real-time AppSheet & Google Sheets Dashboard<br>
+    <div style="text-align: center; font-size: 0.85em; color: #E0E6ED; padding-bottom: 20px;">
+        ✈️ <b>PDBBM TEV Executive Tracker</b> | Real-time AppSheet Integration<br>
         Developed by <b>LOUIE B. IDULSA - PDBBM ITO I</b> • DSWD Field Office X
     </div>
     """,
