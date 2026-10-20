@@ -76,7 +76,7 @@ def format_appsheet_file_url(val):
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
     return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
-# 🎯 Clean Physical Crop Function (Red Box Area: Header + Names + Inclusive Dates)
+# 🎯 Strict Physical Crop Function (Pangalan, Fund Source, Type of Claims, Inclusive Dates RA ANG MAKITA)
 @st.cache_data(ttl=3600)
 def get_clean_boxed_crop(img_url):
     try:
@@ -88,8 +88,9 @@ def get_clean_boxed_crop(img_url):
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
         width, height = img.size
         
-        # Crop Area: Top-Left to 67% Width and 88% Height (Excludes Amount & Slashes)
-        crop_area = (0, 0, int(width * 0.67), int(height * 0.88))
+        # Precise Crop: Putlon sa 61% sa Lapad (Width) para matangtang ang Amount Claim column
+        # Putlon usab sa 82% sa Gitas-on (Height) para matangtang ang TOTAL sa ubos
+        crop_area = (0, 0, int(width * 0.61), int(height * 0.82))
         cropped_img = img.crop(crop_area)
         
         return cropped_img
@@ -365,7 +366,7 @@ if not df_tev.empty:
                         if clean_crop:
                             st.image(clean_crop, caption="Et. Al List Verification (Names & Details Only)", use_container_width=True)
                         else:
-                            st.image(img_url, caption="Et. Al List Verification", use_container_width=True)
+                            st.caption("ℹ️ Attachment preview unavailable.")
                     else:
                         st.caption("ℹ️ Walang naka-attach na image preview sa entry na ito.")
 
