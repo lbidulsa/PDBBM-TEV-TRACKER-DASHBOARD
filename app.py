@@ -25,20 +25,17 @@ PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6
 APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
 APPSHEET_TABLE_NAME = "TEV"
 
-@st.cache_data(ttl=20)
+@st.cache_data(ttl=60, max_entries=5)
 def load_tev_data():
     try:
         df = pd.read_csv(PUBLISHED_CSV_URL)
         df.columns = [str(col).strip() for col in df.columns]
         
-        # Alisin ang mga empty rows
         df = df.dropna(how='all')
         
-        # Detect DRN Column
         drn_c = df.columns[0]
         df = df[df[drn_c].notna() & (df[drn_c].astype(str).str.strip() != '') & (df[drn_c].astype(str).str.strip().str.upper() != 'NAN')]
         
-        # Smart Date Sorting (Latest October first)
         date_c = None
         for c in df.columns:
             if any(k in c.lower() for k in ['date', 'time', 'received', 'created']):
@@ -58,7 +55,6 @@ def load_tev_data():
         st.error(f"Error connecting to Google Sheets: {e}")
         return pd.DataFrame()
 
-# Smart URL Parser para sa AppSheet File URL
 def format_appsheet_file_url(val):
     if pd.isna(val) or not str(val).strip() or str(val).lower() == 'nan':
         return None
@@ -76,22 +72,24 @@ def format_appsheet_file_url(val):
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
     return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
-# 🎯 Strict Physical Crop Function (Pangalan, Fund Source, Type of Claims, Inclusive Dates RA ANG MAKITA)
-@st.cache_data(ttl=3600)
+# 🎯 Memory-Optimized Crop Function (Lightweight Memory Consumption)
+@st.cache_data(ttl=1800, max_entries=20)
 def get_clean_boxed_crop(img_url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        resp = requests.get(img_url, headers=headers, timeout=8)
+        resp = requests.get(img_url, headers=headers, timeout=5)
         if resp.status_code != 200:
             return None
         
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
         width, height = img.size
         
-        # Precise Crop: Putlon sa 61% sa Lapad (Width) para matangtang ang Amount Claim column
-        # Putlon usab sa 82% sa Gitas-on (Height) para matangtang ang TOTAL sa ubos
+        # Crop Area: 61% Width, 82% Height
         crop_area = (0, 0, int(width * 0.61), int(height * 0.82))
         cropped_img = img.crop(crop_area)
+        
+        # Resize/Compress image in RAM to save memory
+        cropped_img.thumbnail((1000, 1000))
         
         return cropped_img
     except Exception:
@@ -115,13 +113,11 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* Deep Obsidian Background */
     .stApp { 
         background-color: #080C14 !important; 
         color: #FFFFFF !important;
     }
     
-    /* Neon Header Card */
     .header-card {
         background: linear-gradient(135deg, #0F172A 0%, #1E1035 100%);
         border: 2px solid #00F5FF;
@@ -133,7 +129,6 @@ st.markdown("""
     .header-title { font-size: 30px; font-weight: 900; color: #00F5FF; text-shadow: 0 0 10px rgba(0, 245, 255, 0.6); }
     .header-sub { font-size: 15px; color: #E2E8F0; font-weight: 500; }
 
-    /* 🌟 CATCHY NEON METRIC CARDS WITH GLOW */
     .metric-card {
         background: #0F172A;
         border: 2px solid #1E293B;
@@ -157,7 +152,6 @@ st.markdown("""
     }
     .metric-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* 🌟 NEON MAGENTA BUTTONS */
     div.stButton > button, div.stDownloadButton > button {
         background: linear-gradient(135deg, #FF007F 0%, #7928CA 100%) !important;
         color: #FFFFFF !important;
@@ -176,7 +170,6 @@ st.markdown("""
         transform: translateY(-3px) scale(1.03) !important;
     }
 
-    /* 🌟 NEON EXPANDER CARD */
     .stExpander {
         background-color: #0F172A !important;
         border: 1px solid #1E293B !important;
@@ -188,7 +181,6 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 0, 127, 0.4) !important;
     }
     
-    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #080C14 !important;
         border-right: 1px solid #1E293B;
@@ -318,6 +310,7 @@ if not df_tev.empty:
 
             expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}"
 
+            # Open expander logic to prevent loading all images at once
             with st.expander(expander_title, expanded=False):
                 col_info, col_status, col_attach = st.columns([2, 2, 1.5])
 
