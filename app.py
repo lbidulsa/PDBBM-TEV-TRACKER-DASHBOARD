@@ -25,7 +25,8 @@ PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6
 APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
 APPSHEET_TABLE_NAME = "TEV"
 
-@st.cache_data(ttl=60, max_entries=5)
+# Fast 10-second Live Cache Refresh
+@st.cache_data(ttl=10, max_entries=5)
 def load_tev_data():
     try:
         df = pd.read_csv(PUBLISHED_CSV_URL)
@@ -72,7 +73,7 @@ def format_appsheet_file_url(val):
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
     return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
-# 🎯 Memory-Optimized Crop Function (Lightweight Memory Consumption)
+# 🎯 Tight Physical Crop Function (Name & Position Only - Amount 100% Excluded)
 @st.cache_data(ttl=1800, max_entries=20)
 def get_clean_boxed_crop(img_url):
     try:
@@ -84,11 +85,11 @@ def get_clean_boxed_crop(img_url):
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
         width, height = img.size
         
-        # Crop Area: 61% Width, 82% Height
-        crop_area = (0, 0, int(width * 0.61), int(height * 0.82))
+        # Tight crop: 52% width (cut before Amount Column), 80% height
+        crop_area = (0, 0, int(width * 0.52), int(height * 0.80))
         cropped_img = img.crop(crop_area)
         
-        # Resize/Compress image in RAM to save memory
+        # Compress image in RAM to prevent memory limit crash
         cropped_img.thumbnail((1000, 1000))
         
         return cropped_img
@@ -205,6 +206,7 @@ st.sidebar.markdown("### ✈️ PDBBM TEV Portal")
 st.sidebar.caption("AppSheet Live Synchronization")
 st.sidebar.markdown("---")
 
+# Force Cache Clear Button
 if st.sidebar.button("🔄 Sync / Refresh Data", use_container_width=True):
     st.cache_data.clear()
     st.toast("⚡ Refreshed latest TEV records!", icon="🔄")
@@ -310,7 +312,6 @@ if not df_tev.empty:
 
             expander_title = f"📄 DRN: {drn_val}  |  Claimant/Et.Al: {name_val}"
 
-            # Open expander logic to prevent loading all images at once
             with st.expander(expander_title, expanded=False):
                 col_info, col_status, col_attach = st.columns([2, 2, 1.5])
 
