@@ -9,7 +9,7 @@ import plotly.express as px
 import streamlit as st
 
 # ---------------------------------------------------------
-# 1. PAGE CONFIGURATION
+# 1. PAGE CONFIGURATION & SECURITY STYLING
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="PDBBM TEV Executive Tracker",
@@ -21,7 +21,8 @@ st.set_page_config(
 # ---------------------------------------------------------
 # 2. GOOGLE SHEETS LIVE SYNC CONFIGURATION
 # ---------------------------------------------------------
-PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv"
+# Pull URL from st.secrets if available, else fallback to direct URL
+PUBLISHED_CSV_URL = st.secrets.get("PUBLISHED_CSV_URL", "https://docs.google.com/spreadsheets/d/e/2PACX-1vTuXeMfsAR6xhb8rZXb_k-NJcERcbE7om2O7isdpHI_VpD6EdnJyT5kK6wFHjK0z7zMugyztwW4l-J-/pub?gid=656688492&single=true&output=csv")
 APPSHEET_APP_NAME = "PDBBM-RPMODocumentTracker-270708318"
 APPSHEET_TABLE_NAME = "TEV"
 
@@ -73,7 +74,7 @@ def format_appsheet_file_url(val):
     encoded_path = val_str.replace(" ", "%20").replace("/", "%2F")
     return f"https://www.appsheet.com/template/gettablefileurl?appName={APPSHEET_APP_NAME}&tableName={encoded_table}&fileName={encoded_path}"
 
-# 🎯 Tight Physical Crop Function (Name & Position Only - Amount 100% Excluded)
+# Tight Physical Crop Function
 @st.cache_data(ttl=1800, max_entries=20)
 def get_clean_boxed_crop(img_url):
     try:
@@ -85,11 +86,9 @@ def get_clean_boxed_crop(img_url):
         img = Image.open(io.BytesIO(resp.content)).convert("RGB")
         width, height = img.size
         
-        # Tight crop: 52% width (cut before Amount Column), 80% height
         crop_area = (0, 0, int(width * 0.52), int(height * 0.80))
         cropped_img = img.crop(crop_area)
         
-        # Compress image in RAM to prevent memory limit crash
         cropped_img.thumbnail((1000, 1000))
         
         return cropped_img
@@ -104,7 +103,7 @@ def clean_val(val, default="---"):
 df_tev = load_tev_data()
 
 # ---------------------------------------------------------
-# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + SIGA-SIGA CSS
+# 3. HIGH-CONTRAST NEON CYBERPUNK THEME + SECURITY CSS
 # ---------------------------------------------------------
 st.markdown("""
     <style>
@@ -118,6 +117,12 @@ st.markdown("""
         background-color: #080C14 !important; 
         color: #FFFFFF !important;
     }
+
+    /* Security Fix: Hide Streamlit Header, GitHub Repository Link, and Main Menu */
+    header[data-testid="stHeader"] { visibility: hidden !important; display: none !important; }
+    #MainMenu { visibility: hidden !important; display: none !important; }
+    footer { visibility: hidden !important; display: none !important; }
+    .stAppDeployButton { display: none !important; }
     
     .header-card {
         background: linear-gradient(135deg, #0F172A 0%, #1E1035 100%);
@@ -194,7 +199,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. SIDEBAR NAVIGATION WITH LOGO
+# 4. SIDEBAR NAVIGATION WITH LOGO & REFRESH BUTTON
 # ---------------------------------------------------------
 logo_path = "logo.png"
 if os.path.exists(logo_path):
